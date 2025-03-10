@@ -1,5 +1,5 @@
 use std::str::FromStr;
-mod base_type
+mod base_type;
 
 grammar;
 
