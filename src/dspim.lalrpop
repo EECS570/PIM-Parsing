@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use base_type;
+use base_type::{PIMBaseType};
 
 grammar;
 
