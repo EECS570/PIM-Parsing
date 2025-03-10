@@ -1,5 +1,5 @@
 use lalrpop_util::lalrpop_mod;
-mod base_type;
+mod base_type_pim;
 
 lalrpop_mod!(pub dspim); // synthesized by LALRPOP
 
