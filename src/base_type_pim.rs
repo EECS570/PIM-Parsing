@@ -10,5 +10,5 @@ pub enum PIMBaseType {
 
 pub enum PIMType {
     Basic(PIMBaseType),
-    Array(PIMBaseType),
+    Array(PIMBaseType, i32),
 }
