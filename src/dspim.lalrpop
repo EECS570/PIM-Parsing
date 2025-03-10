@@ -1,0 +1,23 @@
+use std::str::FromStr;
+mod base_type
+
+grammar;
+
+BaseType: PIMBaseType = {
+  "int8" => PIMBaseType::Int8,
+  "int16" => PIMBaseType::Int16,
+  "int32" => PIMBaseType::Int32,
+  "int64" => PIMBaseType::Int64,
+  "float" => PIMBaseType::Float,
+  "double" => PIMBaseType::Double,
+  "char" => PIMBaseType::Char,
+}
+
+Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
+
+
+pub Term: i32 = {
+    <n:Num> => n,
+    "(" <t:Term> ")" => t,
+};
+

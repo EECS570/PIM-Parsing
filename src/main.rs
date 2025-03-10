@@ -1,4 +1,5 @@
 use lalrpop_util::lalrpop_mod;
+mod base_type;
 
 lalrpop_mod!(pub calculator1); // synthesized by LALRPOP
 
