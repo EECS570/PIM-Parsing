@@ -17,5 +17,18 @@ fn test_type() {
     assert!(dspim::PIMTypeRuleParser::new().parse("int64 [30]").is_ok());
 }
 
+#[test]
+fn test_block() {
+    let var_name = dspim::TokenRuleParser::new().parse("hello");
+    match var_name {
+        Ok(s) => assert!(s == "hello"),
+        Err(_) => panic!()
+    }
+    // assert!(var_name.is_ok());
+    let field = dspim::FieldRuleParser::new().parse("hello : int8");
+    let name = field.expect("msg").varname;
+    eprintln!("varname: {name}");
+}
+
 fn main() {
 }

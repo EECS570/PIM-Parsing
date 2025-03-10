@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::base_type_pim::{PIMBaseType, PIMType};
+use crate::base_type_pim::{PIMBaseType, PIMType, PIMField};
 
 grammar;
 
@@ -17,6 +17,10 @@ pub PIMTypeRule: PIMType  = {
   <b: PIMBaseTypeRule> => PIMType::Basic(b),
   <b: PIMBaseTypeRule> "[" <n:Num> "]" => PIMType::Array(b, n)
 };
+
+pub TokenRule: &'input str = <s:r"[a-zA-Z][a-zA-Z0-9\_]*"> => s;
+
+pub FieldRule: PIMField<'input> = <name: TokenRule> ":" <t: PIMTypeRule> => PIMField{varname:name, pim_type:t};
 
 Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
 
