@@ -1,4 +1,8 @@
 node hello {
   number: int8;
   essay: char[800];
-}
+};
+
+edge hello hello hedge {
+
+};

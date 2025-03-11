@@ -40,7 +40,7 @@ pub struct Edge<'a> {
 
 
 #[derive(Debug, Clone)]
-pub struct Parse<'a> {
-    nodes: Vec<Node<'a>>,
-    edges: Vec<Edge<'a>>,
+pub enum GeneralBlock<'a> {
+    NodeBlock(Node<'a>),
+    EdgeBlock(Edge<'a>)
 }
