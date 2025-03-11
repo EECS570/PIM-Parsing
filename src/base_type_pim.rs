@@ -13,7 +13,7 @@ pub enum PIMType {
     Array(PIMBaseType, i32),
 }
 
-pub struct PIMField <'a> {
+pub struct PIMField<'a> {
     pub varname: &'a str,
-    pub pim_type: PIMType
+    pub pim_type: PIMType,
 }

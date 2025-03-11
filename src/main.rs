@@ -22,7 +22,7 @@ fn test_block() {
     let var_name = dspim::TokenRuleParser::new().parse("hello");
     match var_name {
         Ok(s) => assert!(s == "hello"),
-        Err(_) => panic!()
+        Err(_) => panic!(),
     }
     // assert!(var_name.is_ok());
     let field = dspim::FieldRuleParser::new().parse("hello : int8");
@@ -30,5 +30,4 @@ fn test_block() {
     eprintln!("varname: {name}");
 }
 
-fn main() {
-}
+fn main() {}
