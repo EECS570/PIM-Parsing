@@ -3,5 +3,5 @@ node hello {
   essay: char[800];
 };
 edge hello hello hedge {
-
+  number: int8;
 };

@@ -1,4 +1,4 @@
-use base_type_pim::{PIMBaseType, PIMType, GeneralBlock};
+use base_type_pim::{GeneralBlock, PIMBaseType, PIMType};
 use lalrpop_util::lalrpop_mod;
 mod base_type_pim;
 use anyhow::Result;
@@ -41,19 +41,35 @@ fn test_block() {
     println!("{:?}", list);
 
     let block = dspim::BlockRuleParser::new()
-        .parse("{hello: int16; goodbye: float;}")
+        .parse("{hello: int16; goodbye: float;};")
         .expect("Parsing error");
     println!("{:?}", block);
 
     let namedblock = dspim::NamedBlockRuleParser::new()
-        .parse("nd {hello: int16; goodbye: float;}")
+        .parse("nd {hello: int16; goodbye: float;};")
         .expect("Parsing error");
     println!("{:?}", namedblock);
 
     let node = dspim::NodeRuleParser::new()
-        .parse("node nd {hello: int16; goodbye: float;}")
+        .parse("node nd {hello: int16; goodbye: float;};")
         .expect("Parsing error");
     println!("{:?}", node);
+}
+
+
+#[test]
+pub fn test_graph() {
+    let node_list = dspim::NodeInstRuleParser::new().parse("Hello h1, h2, h3;").expect("Parsing Error");
+    assert_eq!(node_list[0].varname, "h1");
+    assert_eq!(node_list[1].varname, "h2");
+    assert_eq!(node_list[2].varname, "h3");
+    assert_eq!(node_list[0].node_type, "Hello");
+    println!("{:?}", node_list);
+
+    let graph = dspim::GraphRuleParser::new().parse("graph {};").expect("Parsing Error");
+    println!("{:?}", graph);
+    let graph = dspim::GraphRuleParser::new().parse("graph {Hello h1,h2,h3; Hedge h1 h2 7; Hedge h2 h3 5; Hello h4;};").expect("Parsing Error");
+    println!("{:?}", graph);
 }
 
 fn parse_str(content: &str) -> Result<Vec<GeneralBlock>> {

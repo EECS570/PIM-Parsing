@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock};
+use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock, Walker, NodeInst, transform_node_inst, EdgeInst, Graph};
 
 grammar;
 
@@ -50,9 +50,78 @@ pub EdgeRule: Edge<'input> = {
   }
 }
 
+pub WalkerRule: Walker<'input> = {
+  "walker" <node_type: TokenRule> <name: TokenRule> ";"=> {
+    Walker {name: name, node_type: node_type}
+  }
+}
+
+pub TokenListRule: Vec<&'input str> = {
+  <t: TokenRule> => Vec::from([t]),
+  <l: TokenListRule> "," <t: TokenRule> => {
+    let mut _l = l.clone();
+    _l.append(&mut vec! [t]);
+    _l
+  }
+}
+
+pub NodeInstRule: Vec<NodeInst<'input>> = {
+  <node_type: TokenRule> <l: TokenListRule> ";" => {
+    transform_node_inst(node_type, l)
+  }
+}
+
+pub EdgeInstRule: EdgeInst<'input> = {
+  <edge_type: TokenRule> <from_varname: TokenRule> <to_varname: TokenRule> <weight: Num> ";" => {
+    EdgeInst {
+      edge_type,
+      from_varname,
+      to_varname,
+      weight,
+    }
+  }
+}
+
+pub GraphInstrListRule: Graph<'input> = {
+  <node_list: NodeInstRule> => {
+    Graph {
+      node_insts: node_list,
+      edge_insts: Vec::from([]),
+    }
+  },
+  <edge: EdgeInstRule> => {
+    Graph {
+      node_insts: Vec::from([]),
+      edge_insts: vec! [edge]
+    }
+  },
+
+  <g: GraphInstrListRule> <node_list: NodeInstRule> => {
+    let mut _g = g.clone();
+    let mut _node_list = node_list.clone();
+    _g.node_insts.append(&mut _node_list);
+    _g
+  },
+  <g: GraphInstrListRule> <edge: EdgeInstRule> => {
+    let mut _g = g.clone();
+    _g.edge_insts.append(&mut vec! [edge]);
+    _g
+  }
+
+}
+
+pub GraphRule: Graph<'input> = {
+  "graph" "{" <l: GraphInstrListRule> "};" => l,
+  "graph" "{"  "};" => {
+    Graph{node_insts: Vec::from([]), edge_insts: Vec::from([])}
+  }
+}
+
 pub GeneralBlockRule: GeneralBlock<'input> = {
   <node: NodeRule> => GeneralBlock::NodeBlock(node),
   <edge: EdgeRule> => GeneralBlock::EdgeBlock(edge),
+  <walker: WalkerRule> => GeneralBlock::WalkerBlock(walker),
+  <graph: GraphRule> => GeneralBlock::GraphBlock(graph),
 }
 
 pub GeneralRule: Vec<GeneralBlock<'input>> = {
@@ -63,8 +132,6 @@ pub GeneralRule: Vec<GeneralBlock<'input>> = {
     _l
   }
 }
-
-
 
 Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
 
