@@ -1,0 +1,4 @@
+node hello {
+  number: int8;
+  essay: char[800];
+}

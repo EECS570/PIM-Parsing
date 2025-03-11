@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+clap = { version = "4.5.32", features = ["derive"] }
 lalrpop-util = { version = "0.21.0", features = ["lexer", "unicode"] }
+anyhow = { version = "1.0.97" }
 
 # Add a build-time dependency on the lalrpop library:
 [build-dependencies]
