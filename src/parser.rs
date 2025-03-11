@@ -1,6 +1,6 @@
 use crate::base_type_pim::{GeneralBlock, PIMBaseType, PIMType};
-use lalrpop_util::lalrpop_mod;
 use anyhow::Result;
+use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(pub dspim); // synthesized by LALRPOP
 
