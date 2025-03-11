@@ -1,3 +1,4 @@
+use base_type_pim::{PIMBaseType, PIMType};
 use lalrpop_util::lalrpop_mod;
 mod base_type_pim;
 
@@ -25,9 +26,23 @@ fn test_block() {
         Err(_) => panic!(),
     }
     // assert!(var_name.is_ok());
-    let field = dspim::FieldRuleParser::new().parse("hello : int8");
-    let name = field.expect("msg").varname;
-    eprintln!("varname: {name}");
+    let field = dspim::FieldRuleParser::new().parse("hello : int16");
+    let value = field.expect("Parsing failed");
+    println!("{:?}", value);
+    assert!(value.pim_type == PIMType::Basic(PIMBaseType::Int16));
+    assert!(value.varname == "hello");
+    
+    let list = dspim::FieldListRuleParser::new().parse("hello: int16; goodbye: float;").expect("Parsing error");
+    println!("{:?}", list);
+
+    let block = dspim::BlockRuleParser::new().parse("{hello: int16; goodbye: float;}").expect("Parsing error");
+    println!("{:?}", block);
+
+    let namedblock = dspim::NamedBlockRuleParser::new().parse("nd {hello: int16; goodbye: float;}").expect("Parsing error");
+    println!("{:?}", namedblock);
+
+    let node = dspim::NodeRuleParser::new().parse("node nd {hello: int16; goodbye: float;}").expect("Parsing error");
+    println!("{:?}", node);
 }
 
 fn main() {}
