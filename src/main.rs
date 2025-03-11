@@ -1,10 +1,9 @@
 use base_type_pim::{PIMBaseType, PIMType};
 use lalrpop_util::lalrpop_mod;
 mod base_type_pim;
-use clap::Parser;
 use anyhow::Result;
+use clap::Parser;
 use std::fs;
-
 
 lalrpop_mod!(pub dspim); // synthesized by LALRPOP
 
@@ -57,9 +56,10 @@ fn test_block() {
     println!("{:?}", node);
 }
 
-fn parse_str(content: &str)-> Result<()> {
+fn parse_str(content: &str) -> Result<()> {
     let node = dspim::NodeRuleParser::new()
-        .parse(content).map_err(|e| anyhow::anyhow!("{}", e))?;
+        .parse(content)
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     println!("{:?}", node);
     Ok(())
 }
@@ -77,13 +77,12 @@ struct Args {
     count: u8,
 }
 
-fn main() -> Result<()>{
+fn main() -> Result<()> {
     let args = Args::parse();
 
     println!("Reading from: {}", args.file);
     let file_content = fs::read_to_string(args.file)?;
     println!("File content: {}", file_content);
-    let _ = parse_str(&file_content);
+    let _ = parse_str(&file_content)?;
     Ok(())
-
 }
