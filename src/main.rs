@@ -3,10 +3,20 @@ mod parser;
 use crate::parser::parse_str;
 use anyhow::Result;
 use base_type_pim::GeneralBlock;
+use base_type_pim::NamedBlock;
 use clap::Parser;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum SemanticsError {
+    #[error("Token `{0}` is not undefined.")]
+    UndefinedToken(String),
+    #[error("Unknown error.")]
+    Unknown,
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -17,7 +27,18 @@ struct Args {
     count: u8,
 }
 
-fn semantic_analysis<'input>(general: Vec<GeneralBlock<'input>>) {
+pub struct SemanticEdge<'a> {
+    pub from: Rc<NamedBlock<'a>>,
+    pub to: Rc<NamedBlock<'a>>,
+    pub named_block: NamedBlock<'a>,
+}
+
+pub struct SemanticWalker<'a> {
+    pub name: &'a str,
+    pub node_type: Rc<NamedBlock<'a>>,
+}
+
+fn semantic_analysis<'input>(general: Vec<GeneralBlock<'input>>) -> Result<()> {
     let mut node_types = HashMap::new();
     let mut edge_types = HashMap::new();
     let mut walker_types = HashMap::new();
@@ -27,7 +48,7 @@ fn semantic_analysis<'input>(general: Vec<GeneralBlock<'input>>) {
                 node_types.insert(node.0.name, Rc::new(node.0));
             }
             GeneralBlock::EdgeBlock(edge) => {
-                edge_types.insert(edge.named_block.name, Rc::new(edge));
+                edge_types.insert(edge.named_block.name, edge);
             }
             GeneralBlock::WalkerBlock(walker) => {
                 walker_types.insert(walker.name, Rc::new(walker));
@@ -35,6 +56,40 @@ fn semantic_analysis<'input>(general: Vec<GeneralBlock<'input>>) {
             _ => {}
         }
     }
+    let mut semantic_edge_types = HashMap::new();
+    for (_, edge) in edge_types {
+        semantic_edge_types.insert(
+            edge.named_block.name,
+            Rc::new(SemanticEdge {
+                from: node_types
+                    .get(edge.from)
+                    .ok_or(SemanticsError::UndefinedToken(String::from(edge.from)))?
+                    .clone(),
+                to: node_types
+                    .get(edge.to)
+                    .ok_or(SemanticsError::UndefinedToken(String::from(edge.to)))?
+                    .clone(),
+                named_block: edge.named_block,
+            }),
+        );
+    }
+
+    let mut semantic_walker_types = HashMap::new();
+    for (_, walker) in walker_types {
+        semantic_walker_types.insert(
+            walker.name,
+            Rc::new(SemanticWalker {
+                name: walker.name,
+                node_type: node_types
+                    .get(walker.node_type)
+                    .ok_or(SemanticsError::UndefinedToken(String::from(
+                        walker.node_type,
+                    )))?
+                    .clone(),
+            }),
+        );
+    }
+    Ok(())
 }
 
 fn main() -> Result<()> {
