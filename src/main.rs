@@ -1,4 +1,4 @@
-use base_type_pim::{PIMBaseType, PIMType};
+use base_type_pim::{PIMBaseType, PIMType, GeneralBlock};
 use lalrpop_util::lalrpop_mod;
 mod base_type_pim;
 use anyhow::Result;
@@ -56,12 +56,11 @@ fn test_block() {
     println!("{:?}", node);
 }
 
-fn parse_str(content: &str) -> Result<()> {
-    let node = dspim::NodeRuleParser::new()
+fn parse_str(content: &str) -> Result<Vec<GeneralBlock>> {
+    let input = dspim::GeneralRuleParser::new()
         .parse(content)
         .map_err(|e| anyhow::anyhow!("{}", e))?;
-    println!("{:?}", node);
-    Ok(())
+    Ok(input)
 }
 
 /// Simple program to greet a person
