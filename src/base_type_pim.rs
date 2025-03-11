@@ -16,15 +16,15 @@ pub enum PIMType {
 }
 
 #[derive(Debug, Clone)]
-pub struct PIMField <'a> {
+pub struct PIMField<'a> {
     pub varname: &'a str,
-    pub pim_type: PIMType
+    pub pim_type: PIMType,
 }
 
 #[derive(Debug, Clone)]
 pub struct NamedBlock<'a> {
     pub name: &'a str,
-    pub fields: Vec<PIMField<'a>>
+    pub fields: Vec<PIMField<'a>>,
 }
 
 #[derive(Debug, Clone)]

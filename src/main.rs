@@ -31,17 +31,25 @@ fn test_block() {
     println!("{:?}", value);
     assert!(value.pim_type == PIMType::Basic(PIMBaseType::Int16));
     assert!(value.varname == "hello");
-    
-    let list = dspim::FieldListRuleParser::new().parse("hello: int16; goodbye: float;").expect("Parsing error");
+
+    let list = dspim::FieldListRuleParser::new()
+        .parse("hello: int16; goodbye: float;")
+        .expect("Parsing error");
     println!("{:?}", list);
 
-    let block = dspim::BlockRuleParser::new().parse("{hello: int16; goodbye: float;}").expect("Parsing error");
+    let block = dspim::BlockRuleParser::new()
+        .parse("{hello: int16; goodbye: float;}")
+        .expect("Parsing error");
     println!("{:?}", block);
 
-    let namedblock = dspim::NamedBlockRuleParser::new().parse("nd {hello: int16; goodbye: float;}").expect("Parsing error");
+    let namedblock = dspim::NamedBlockRuleParser::new()
+        .parse("nd {hello: int16; goodbye: float;}")
+        .expect("Parsing error");
     println!("{:?}", namedblock);
 
-    let node = dspim::NodeRuleParser::new().parse("node nd {hello: int16; goodbye: float;}").expect("Parsing error");
+    let node = dspim::NodeRuleParser::new()
+        .parse("node nd {hello: int16; goodbye: float;}")
+        .expect("Parsing error");
     println!("{:?}", node);
 }
 
