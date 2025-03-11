@@ -54,10 +54,13 @@ pub fn transform_node_inst<'input>(
     node_type: &'input str,
     token_list: Vec<&'input str>,
 ) -> Vec<NodeInst<'input>> {
-    token_list.into_iter().map(|a| NodeInst {
-        node_type,
-        varname: a,
-    }).collect()
+    token_list
+        .into_iter()
+        .map(|a| NodeInst {
+            node_type,
+            varname: a,
+        })
+        .collect()
 }
 
 #[derive(Debug, Clone)]
