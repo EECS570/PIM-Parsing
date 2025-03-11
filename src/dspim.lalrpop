@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::base_type_pim::{PIMBaseType, PIMType, PIMField};
+use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node};
 
 grammar;
 
@@ -21,6 +21,27 @@ pub PIMTypeRule: PIMType  = {
 pub TokenRule: &'input str = <s:r"[a-zA-Z][a-zA-Z0-9\_]*"> => s;
 
 pub FieldRule: PIMField<'input> = <name: TokenRule> ":" <t: PIMTypeRule> => PIMField{varname:name, pim_type:t};
+
+pub FieldListRule: Vec<PIMField<'input>> = {
+  <f: FieldRule> ";" => Vec::from([f]),
+  <l: FieldListRule> <f: FieldRule> ";" => {
+    let mut _l = l.clone();
+    _l.append(&mut vec! [f]);
+    _l
+  }
+};
+
+pub BlockRule: Vec<PIMField<'input>> = {
+  "{" <l: FieldListRule> "}" => l
+}
+
+pub NamedBlockRule: NamedBlock<'input> = {
+  <name: TokenRule> <b: BlockRule> => NamedBlock{name: name, fields: b}
+}
+
+pub NodeRule: Node<'input> = {
+  "node" <block: NamedBlockRule> => Node(block)
+}
 
 Num: i32 = <s:r"[0-9]+"> => i32::from_str(s).unwrap();
 
