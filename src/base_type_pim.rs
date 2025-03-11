@@ -29,3 +29,18 @@ pub struct NamedBlock<'a> {
 
 #[derive(Debug, Clone)]
 pub struct Node<'a>(pub NamedBlock<'a>);
+
+
+#[derive(Debug, Clone)]
+pub struct Edge<'a> {
+    pub from: &'a str,
+    pub to: &'a str,
+    pub named_block: NamedBlock<'a>, 
+}
+
+
+#[derive(Debug, Clone)]
+pub struct Parse<'a> {
+    nodes: Vec<Node<'a>>,
+    edges: Vec<Edge<'a>>,
+}
