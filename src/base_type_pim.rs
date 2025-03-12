@@ -1,3 +1,6 @@
+pub trait Size {
+    fn size_byte(&self) -> i32;
+}
 #[derive(Debug, PartialEq, Clone)]
 pub enum PIMBaseType {
     Int8,
@@ -9,10 +12,33 @@ pub enum PIMBaseType {
     Char,
 }
 
+impl Size for PIMBaseType {
+    fn size_byte(&self) -> i32 {
+        match self {
+            PIMBaseType::Int8 => 1,
+            PIMBaseType::Int16 => 2,
+            PIMBaseType::Int32 => 4,
+            PIMBaseType::Int64 => 8,
+            PIMBaseType::Float => 4,
+            PIMBaseType::Double => 8,
+            PIMBaseType::Char => 1,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum PIMType {
     Basic(PIMBaseType),
     Array(PIMBaseType, i32),
+}
+
+impl Size for PIMType {
+    fn size_byte(&self) -> i32 {
+        match self {
+            PIMType::Basic(t) => t.size_byte(),
+            PIMType::Array(t, num) => t.size_byte() * num,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -21,10 +47,22 @@ pub struct PIMField<'a> {
     pub pim_type: PIMType,
 }
 
+impl Size for PIMField<'_> {
+    fn size_byte(&self) -> i32 {
+        self.pim_type.size_byte()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NamedBlock<'a> {
     pub name: &'a str,
     pub fields: Vec<PIMField<'a>>,
+}
+
+impl Size for NamedBlock<'_> {
+    fn size_byte(&self) -> i32 {
+        self.fields.iter().map(|field| field.size_byte()).sum()
+    }
 }
 
 #[derive(Debug, Clone)]
