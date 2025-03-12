@@ -88,10 +88,7 @@ pub struct NodeInst {
     pub varname: String,
 }
 
-pub fn transform_node_inst(
-    node_type: &str,
-    token_list: &Vec<String>,
-) -> Vec<NodeInst> {
+pub fn transform_node_inst(node_type: &str, token_list: &Vec<String>) -> Vec<NodeInst> {
     token_list
         .into_iter()
         .map(|a| NodeInst {

@@ -1,4 +1,4 @@
-use crate::base_type_pim::{Edge, GeneralBlock, NamedBlock, Walker};
+use crate::base_type_pim::{Edge, GeneralBlock, NamedBlock, Walker, Graph};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -21,6 +21,25 @@ pub struct SemanticEdge {
 pub struct SemanticWalker {
     pub name: String,
     pub node_type: Rc<NamedBlock>,
+}
+
+pub struct SemanticNodeInst {
+    pub varname: String,
+    pub node_type: Rc<NamedBlock>,
+}
+
+pub struct SemanticEdgeInst {
+    pub edge_type: Rc<SemanticEdge>,
+    pub from_var: Rc<SemanticNodeInst>,
+    pub to_var: Rc<SemanticNodeInst>,
+    pub weight: i32,
+}
+
+pub struct SemanticGlobal {
+    pub edges: HashMap<String, Rc<SemanticEdge>>,
+    pub walkers: HashMap<String, Rc<SemanticWalker>>,
+    pub node_insts: HashMap<String, Rc<SemanticNodeInst>>,
+    pub edge_insts: HashMap<String, Rc<SemanticEdge>>,
 }
 
 fn transform_edge_hashmap_to_semantic<'input>(
@@ -69,7 +88,7 @@ fn transform_walker_hashmap_to_semantic(
     Ok(semantic_walker_types)
 }
 
-pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<()> {
+pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<SemanticGlobal> {
     let mut node_types = HashMap::new();
     let mut edge_types = HashMap::new();
     let mut walker_types = HashMap::new();
@@ -84,12 +103,17 @@ pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<()> {
             GeneralBlock::WalkerBlock(walker) => {
                 walker_types.insert(walker.name.clone(), walker);
             }
-            _ => {}
+            GeneralBlock::GraphBlock(g) => {
+                //graph = Some(g)
+            }
         }
     }
 
     let semantic_edge_types = transform_edge_hashmap_to_semantic(&node_types, edge_types)?;
     let semantic_walker_types = transform_walker_hashmap_to_semantic(&node_types, walker_types)?;
 
-    Ok(())
+    Ok(SemanticGlobal {
+        edges: semantic_edge_types,
+        walkers: semantic_walker_types,
+    })
 }
