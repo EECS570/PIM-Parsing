@@ -18,11 +18,11 @@ pub PIMTypeRule: PIMType  = {
   <b: PIMBaseTypeRule> "[" <n:Num> "]" => PIMType::Array(b, n)
 };
 
-pub TokenRule: &'input str = <s:r"[a-zA-Z][a-zA-Z0-9\_]*"> => s;
+pub TokenRule: String = <s:r"[a-zA-Z][a-zA-Z0-9\_]*"> => s.to_string();
 
-pub FieldRule: PIMField<'input> = <name: TokenRule> ":" <t: PIMTypeRule> => PIMField{varname:name, pim_type:t};
+pub FieldRule: PIMField = <name: TokenRule> ":" <t: PIMTypeRule> => PIMField{varname:name, pim_type:t};
 
-pub FieldListRule: Vec<PIMField<'input>> = {
+pub FieldListRule: Vec<PIMField> = {
   <f: FieldRule> ";" => Vec::from([f]),
   <l: FieldListRule> <f: FieldRule> ";" => {
     let mut _l = l.clone();
@@ -31,32 +31,32 @@ pub FieldListRule: Vec<PIMField<'input>> = {
   }
 };
 
-pub BlockRule: Vec<PIMField<'input>> = {
+pub BlockRule: Vec<PIMField> = {
   "{" <l: FieldListRule> "};" => l,
   "{" "};" => Vec::from([]),
 }
 
-pub NamedBlockRule: NamedBlock<'input> = {
+pub NamedBlockRule: NamedBlock = {
   <name: TokenRule> <b: BlockRule> => NamedBlock{name: name, fields: b}
 }
 
-pub NodeRule: Node<'input> = {
+pub NodeRule: Node = {
   "node" <block: NamedBlockRule> => Node(block)
 }
 
-pub EdgeRule: Edge<'input> = {
+pub EdgeRule: Edge = {
   "edge" <from: TokenRule> <to: TokenRule> <block: NamedBlockRule> => {
     Edge {from: from, to: to, named_block: block}
   }
 }
 
-pub WalkerRule: Walker<'input> = {
+pub WalkerRule: Walker = {
   "walker" <node_type: TokenRule> <name: TokenRule> ";"=> {
     Walker {name: name, node_type: node_type}
   }
 }
 
-pub TokenListRule: Vec<&'input str> = {
+pub TokenListRule: Vec<String> = {
   <t: TokenRule> => Vec::from([t]),
   <l: TokenListRule> "," <t: TokenRule> => {
     let mut _l = l.clone();
@@ -65,13 +65,13 @@ pub TokenListRule: Vec<&'input str> = {
   }
 }
 
-pub NodeInstRule: Vec<NodeInst<'input>> = {
+pub NodeInstRule: Vec<NodeInst> = {
   <node_type: TokenRule> <l: TokenListRule> ";" => {
-    transform_node_inst(node_type, l)
+    transform_node_inst(&node_type, &l)
   }
 }
 
-pub EdgeInstRule: EdgeInst<'input> = {
+pub EdgeInstRule: EdgeInst = {
   <edge_type: TokenRule> <from_varname: TokenRule> <to_varname: TokenRule> <weight: Num> ";" => {
     EdgeInst {
       edge_type,
@@ -82,7 +82,7 @@ pub EdgeInstRule: EdgeInst<'input> = {
   }
 }
 
-pub GraphInstrListRule: Graph<'input> = {
+pub GraphInstrListRule: Graph = {
   <node_list: NodeInstRule> => {
     Graph {
       node_insts: node_list,
@@ -110,21 +110,21 @@ pub GraphInstrListRule: Graph<'input> = {
 
 }
 
-pub GraphRule: Graph<'input> = {
+pub GraphRule: Graph = {
   "graph" "{" <l: GraphInstrListRule> "};" => l,
   "graph" "{"  "};" => {
     Graph{node_insts: Vec::from([]), edge_insts: Vec::from([])}
   }
 }
 
-pub GeneralBlockRule: GeneralBlock<'input> = {
+pub GeneralBlockRule: GeneralBlock = {
   <node: NodeRule> => GeneralBlock::NodeBlock(node),
   <edge: EdgeRule> => GeneralBlock::EdgeBlock(edge),
   <walker: WalkerRule> => GeneralBlock::WalkerBlock(walker),
   <graph: GraphRule> => GeneralBlock::GraphBlock(graph),
 }
 
-pub GeneralRule: Vec<GeneralBlock<'input>> = {
+pub GeneralRule: Vec<GeneralBlock> = {
   <general_block: GeneralBlockRule> => Vec::from([general_block]),
   <l: GeneralRule> <general_block: GeneralBlockRule> => {
     let mut _l = l.clone();

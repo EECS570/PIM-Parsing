@@ -42,83 +42,83 @@ impl Size for PIMType {
 }
 
 #[derive(Debug, Clone)]
-pub struct PIMField<'a> {
-    pub varname: &'a str,
+pub struct PIMField {
+    pub varname: String,
     pub pim_type: PIMType,
 }
 
-impl Size for PIMField<'_> {
+impl Size for PIMField {
     fn size_byte(&self) -> i32 {
         self.pim_type.size_byte()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct NamedBlock<'a> {
-    pub name: &'a str,
-    pub fields: Vec<PIMField<'a>>,
+pub struct NamedBlock {
+    pub name: String,
+    pub fields: Vec<PIMField>,
 }
 
-impl Size for NamedBlock<'_> {
+impl Size for NamedBlock {
     fn size_byte(&self) -> i32 {
         self.fields.iter().map(|field| field.size_byte()).sum()
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Node<'a>(pub NamedBlock<'a>);
+pub struct Node(pub NamedBlock);
 
 #[derive(Debug, Clone)]
-pub struct Edge<'a> {
-    pub from: &'a str,
-    pub to: &'a str,
-    pub named_block: NamedBlock<'a>,
+pub struct Edge {
+    pub from: String,
+    pub to: String,
+    pub named_block: NamedBlock,
 }
 
 #[derive(Debug, Clone)]
-pub struct Walker<'a> {
-    pub name: &'a str,
-    pub node_type: &'a str,
+pub struct Walker {
+    pub name: String,
+    pub node_type: String,
 }
 
 #[derive(Debug, Clone)]
 // Instantiation of Node
-pub struct NodeInst<'a> {
-    pub node_type: &'a str,
-    pub varname: &'a str,
+pub struct NodeInst {
+    pub node_type: String,
+    pub varname: String,
 }
 
-pub fn transform_node_inst<'input>(
-    node_type: &'input str,
-    token_list: Vec<&'input str>,
-) -> Vec<NodeInst<'input>> {
+pub fn transform_node_inst(
+    node_type: &str,
+    token_list: &Vec<String>,
+) -> Vec<NodeInst> {
     token_list
         .into_iter()
         .map(|a| NodeInst {
-            node_type,
-            varname: a,
+            node_type: String::from(node_type),
+            varname: a.to_string(),
         })
         .collect()
 }
 
 #[derive(Debug, Clone)]
-pub struct EdgeInst<'a> {
-    pub edge_type: &'a str,
-    pub from_varname: &'a str,
-    pub to_varname: &'a str,
+pub struct EdgeInst {
+    pub edge_type: String,
+    pub from_varname: String,
+    pub to_varname: String,
     pub weight: i32,
 }
 
 #[derive(Debug, Clone)]
-pub struct Graph<'a> {
-    pub node_insts: Vec<NodeInst<'a>>,
-    pub edge_insts: Vec<EdgeInst<'a>>,
+pub struct Graph {
+    pub node_insts: Vec<NodeInst>,
+    pub edge_insts: Vec<EdgeInst>,
 }
 
 #[derive(Debug, Clone)]
-pub enum GeneralBlock<'a> {
-    NodeBlock(Node<'a>),
-    EdgeBlock(Edge<'a>),
-    WalkerBlock(Walker<'a>),
-    GraphBlock(Graph<'a>),
+pub enum GeneralBlock {
+    NodeBlock(Node),
+    EdgeBlock(Edge),
+    WalkerBlock(Walker),
+    GraphBlock(Graph),
 }
