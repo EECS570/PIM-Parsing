@@ -56,7 +56,7 @@ fn test_block() {
 #[test]
 pub fn test_graph() {
     let node_list = dspim::NodeInstRuleParser::new()
-        .parse("Hello h1, h2, h3;")
+        .parse("node Hello h1, h2, h3;")
         .expect("Parsing Error");
     assert_eq!(node_list[0].varname, "h1");
     assert_eq!(node_list[1].varname, "h2");
@@ -69,7 +69,7 @@ pub fn test_graph() {
         .expect("Parsing Error");
     println!("{:?}", graph);
     let graph = dspim::GraphRuleParser::new()
-        .parse("graph {Hello h1,h2,h3; Hedge h1 h2 7; Hedge h2 h3 5; Hello h4;};")
+        .parse("graph { node Hello h1,h2,h3; edge Hedge h1 h2 7; edge Hedge h2 h3 5; node Hello h4;};")
         .expect("Parsing Error");
     println!("{:?}", graph);
 }

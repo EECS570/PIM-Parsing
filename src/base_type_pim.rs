@@ -107,9 +107,16 @@ pub struct EdgeInst {
 }
 
 #[derive(Debug, Clone)]
+pub struct WalkerInst {
+    pub walker_type: String,
+    pub start_node: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct Graph {
     pub node_insts: Vec<NodeInst>,
     pub edge_insts: Vec<EdgeInst>,
+    pub walker_insts: Vec<WalkerInst>,
 }
 
 #[derive(Debug, Clone)]

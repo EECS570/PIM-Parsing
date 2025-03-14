@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock, Walker, NodeInst, transform_node_inst, EdgeInst, Graph};
+use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock, Walker, NodeInst, transform_node_inst, EdgeInst, Graph, WalkerInst};
 
 grammar;
 
@@ -66,13 +66,13 @@ pub TokenListRule: Vec<String> = {
 }
 
 pub NodeInstRule: Vec<NodeInst> = {
-  <node_type: TokenRule> <l: TokenListRule> ";" => {
+  "node" <node_type: TokenRule> <l: TokenListRule> ";" => {
     transform_node_inst(&node_type, &l)
   }
 }
 
 pub EdgeInstRule: EdgeInst = {
-  <edge_type: TokenRule> <from_varname: TokenRule> <to_varname: TokenRule> <weight: Num> ";" => {
+  "edge" <edge_type: TokenRule> <from_varname: TokenRule> <to_varname: TokenRule> <weight: Num> ";" => {
     EdgeInst {
       edge_type,
       from_varname,
@@ -82,17 +82,35 @@ pub EdgeInstRule: EdgeInst = {
   }
 }
 
+pub WalkerInstRule: WalkerInst = {
+  "walker" <walker_type: TokenRule> "on" <start_node: TokenRule> ";" => {
+    WalkerInst {
+      walker_type: walker_type,
+      start_node: start_node,
+    }
+  }
+}
+
 pub GraphInstrListRule: Graph = {
   <node_list: NodeInstRule> => {
     Graph {
       node_insts: node_list,
       edge_insts: Vec::from([]),
+      walker_insts: Vec::from([])
     }
   },
   <edge: EdgeInstRule> => {
     Graph {
       node_insts: Vec::from([]),
-      edge_insts: vec! [edge]
+      edge_insts: vec! [edge],
+      walker_insts: Vec::from([])
+    }
+  },
+  <walker: WalkerInstRule> => {
+    Graph {
+      node_insts: Vec::from([]),
+      edge_insts: Vec::from([]),
+      walker_insts: Vec::from([walker])
     }
   },
 
@@ -106,6 +124,11 @@ pub GraphInstrListRule: Graph = {
     let mut _g = g.clone();
     _g.edge_insts.append(&mut vec! [edge]);
     _g
+  },
+  <g: GraphInstrListRule> <walker: WalkerInstRule> => {
+    let mut _g = g.clone();
+    _g.walker_insts.append(&mut vec! [walker]);
+    _g
   }
 
 }
@@ -113,7 +136,7 @@ pub GraphInstrListRule: Graph = {
 pub GraphRule: Graph = {
   "graph" "{" <l: GraphInstrListRule> "};" => l,
   "graph" "{"  "};" => {
-    Graph{node_insts: Vec::from([]), edge_insts: Vec::from([])}
+    Graph{node_insts: Vec::from([]), edge_insts: Vec::from([]), walker_insts: Vec::from([])}
   }
 }
 
