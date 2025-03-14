@@ -95,13 +95,14 @@ fn transform_walker_hashmap_to_semantic(
 fn transform_graph_to_semantic(
     node_types: &HashMap<String, Rc<NamedBlock>>,
     walker_types: &HashMap<String, Rc<SemanticWalker>>,
+    edge_types: &HashMap<String, Rc<SemanticEdge>>,
     graphs: &Vec<Graph>,
-) -> Result<()> {
+) -> Result<Vec<SemanticGraph>> {
     let sem_graphs: Result<Vec<SemanticGraph>> = graphs
         .into_iter()
         .map(|graph| -> Result<SemanticGraph> {
-            let sem_node_insts: Result<Vec<Rc<SemanticNodeInst>>> = 
-                graph
+            let mut node_hash_map: HashMap<String, Rc<SemanticNodeInst>> = HashMap::new();
+            let sem_node_insts_res: Result<Vec<Rc<SemanticNodeInst>>> = graph
                 .node_insts
                 .iter()
                 .map(|inst| -> Result<Rc<SemanticNodeInst>> {
@@ -117,14 +118,39 @@ fn transform_graph_to_semantic(
                 })
                 .into_iter()
                 .collect();
+            let sem_node_insts = sem_node_insts_res?;
+            for node_inst in &sem_node_insts {
+                node_hash_map.insert(node_inst.varname.clone(), node_inst.clone());
+            }
+            let sem_edge_insts_res: Result<Vec<Rc<SemanticEdgeInst>>> = graph
+                .edge_insts
+                .iter()
+                .map(|inst| -> Result<Rc<SemanticEdgeInst>> {
+                    Ok(Rc::new(SemanticEdgeInst {
+                        edge_type: edge_types
+                            .get(&inst.edge_type)
+                            .ok_or(SemanticsError::UndefinedToken(inst.edge_type.clone()))?
+                            .clone(),
+                        from_var: node_hash_map
+                            .get(&inst.from_varname)
+                            .ok_or(SemanticsError::UndefinedToken(inst.from_varname.clone()))?
+                            .clone(),
+                        to_var: node_hash_map
+                            .get(&inst.to_varname)
+                            .ok_or(SemanticsError::UndefinedToken(inst.to_varname.clone()))?
+                            .clone(),
+                        weight: inst.weight,
+                    }))
+                })
+                .collect();
             Ok(SemanticGraph {
-                node_insts: sem_node_insts?,
-                edge_insts: Vec::from([]),
+                node_insts: sem_node_insts,
+                edge_insts: sem_edge_insts_res?,
             })
-        }).collect();
+        })
+        .collect();
 
-
-    Ok(())
+    sem_graphs
 }
 
 pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<SemanticGlobal> {
@@ -151,9 +177,16 @@ pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<SemanticGlobal> {
 
     let semantic_edge_types = transform_edge_hashmap_to_semantic(&node_types, edge_types)?;
     let semantic_walker_types = transform_walker_hashmap_to_semantic(&node_types, walker_types)?;
+    let semantic_graphs = transform_graph_to_semantic(
+        &node_types,
+        &semantic_walker_types,
+        &semantic_edge_types,
+        &graphs,
+    )?;
 
     Ok(SemanticGlobal {
         edges: semantic_edge_types,
         walkers: semantic_walker_types,
+        graphs: semantic_graphs,
     })
 }
