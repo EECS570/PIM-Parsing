@@ -1,4 +1,4 @@
-use crate::base_type_pim::{Edge, GeneralBlock, NamedBlock, Walker, Graph};
+use crate::base_type_pim::{Edge, GeneralBlock, Graph, NamedBlock, Walker};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -35,11 +35,15 @@ pub struct SemanticEdgeInst {
     pub weight: i32,
 }
 
+pub struct SemanticGraph {
+    pub node_insts: Vec<Rc<SemanticNodeInst>>,
+    pub edge_insts: Vec<Rc<SemanticEdgeInst>>,
+}
+
 pub struct SemanticGlobal {
     pub edges: HashMap<String, Rc<SemanticEdge>>,
     pub walkers: HashMap<String, Rc<SemanticWalker>>,
-    pub node_insts: HashMap<String, Rc<SemanticNodeInst>>,
-    pub edge_insts: HashMap<String, Rc<SemanticEdge>>,
+    pub graphs: Vec<SemanticGraph>,
 }
 
 fn transform_edge_hashmap_to_semantic<'input>(
@@ -88,10 +92,46 @@ fn transform_walker_hashmap_to_semantic(
     Ok(semantic_walker_types)
 }
 
+fn transform_graph_to_semantic(
+    node_types: &HashMap<String, Rc<NamedBlock>>,
+    walker_types: &HashMap<String, Rc<SemanticWalker>>,
+    graphs: &Vec<Graph>,
+) -> Result<()> {
+    let sem_graphs: Result<Vec<SemanticGraph>> = graphs
+        .into_iter()
+        .map(|graph| -> Result<SemanticGraph> {
+            let sem_node_insts: Result<Vec<Rc<SemanticNodeInst>>> = 
+                graph
+                .node_insts
+                .iter()
+                .map(|inst| -> Result<Rc<SemanticNodeInst>> {
+                    Ok(Rc::new(SemanticNodeInst {
+                        varname: inst.varname.clone(),
+                        node_type: node_types
+                            .get(&inst.node_type)
+                            .ok_or(SemanticsError::UndefinedToken(String::from(
+                                inst.varname.clone(),
+                            )))?
+                            .clone(),
+                    }))
+                })
+                .into_iter()
+                .collect();
+            Ok(SemanticGraph {
+                node_insts: sem_node_insts?,
+                edge_insts: Vec::from([]),
+            })
+        }).collect();
+
+
+    Ok(())
+}
+
 pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<SemanticGlobal> {
     let mut node_types = HashMap::new();
     let mut edge_types = HashMap::new();
     let mut walker_types = HashMap::new();
+    let mut graphs = Vec::new();
     for block in general {
         match block {
             GeneralBlock::NodeBlock(node) => {
@@ -104,7 +144,7 @@ pub fn semantic_analysis(general: Vec<GeneralBlock>) -> Result<SemanticGlobal> {
                 walker_types.insert(walker.name.clone(), walker);
             }
             GeneralBlock::GraphBlock(g) => {
-                //graph = Some(g)
+                graphs.push(g);
             }
         }
     }
