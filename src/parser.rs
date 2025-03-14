@@ -69,7 +69,9 @@ pub fn test_graph() {
         .expect("Parsing Error");
     println!("{:?}", graph);
     let graph = dspim::GraphRuleParser::new()
-        .parse("graph { node Hello h1,h2,h3; edge Hedge h1 h2 7; edge Hedge h2 h3 5; node Hello h4;};")
+        .parse(
+            "graph { node Hello h1,h2,h3; edge Hedge h1 h2 7; edge Hedge h2 h3 5; node Hello h4;};",
+        )
         .expect("Parsing Error");
     println!("{:?}", graph);
 }
