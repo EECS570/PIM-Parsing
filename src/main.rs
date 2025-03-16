@@ -1,4 +1,5 @@
 mod base_type;
+mod code_gen;
 mod parser;
 mod sem_type;
 mod semantics_analysis;
@@ -23,6 +24,6 @@ fn main() -> Result<()> {
     println!("Reading from: {}", args.file);
     let file_content = fs::read_to_string(args.file)?;
     println!("File content: {}", file_content);
-    let _ = semantic_analysis(parse_str(&file_content)?);
+    let sem = semantic_analysis(parse_str(&file_content)?);
     Ok(())
 }

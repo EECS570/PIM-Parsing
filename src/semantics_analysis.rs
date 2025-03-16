@@ -1,9 +1,12 @@
 use crate::base_type::{Edge, GeneralBlock, Graph, NamedBlock, Walker};
+use crate::sem_type::{
+    SemanticEdge, SemanticEdgeInst, SemanticGlobal, SemanticGraph, SemanticNodeInst,
+    SemanticWalker, SemanticWalkerInst,
+};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::rc::Rc;
 use thiserror::Error;
-use crate::sem_type::{SemanticWalkerInst, SemanticNodeInst, SemanticWalker, SemanticEdge, SemanticGraph, SemanticGlobal, SemanticEdgeInst};
 
 #[derive(Error, Debug)]
 pub enum SemanticsError {
@@ -12,7 +15,6 @@ pub enum SemanticsError {
     #[error("Unknown error.")]
     Unknown,
 }
-
 
 fn transform_edge_hashmap_to_semantic<'input>(
     node_types: &HashMap<String, Rc<NamedBlock>>,

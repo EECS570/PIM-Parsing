@@ -1,6 +1,6 @@
-use std::rc::Rc;
 use crate::base_type::NamedBlock;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 pub struct SemanticEdge {
     pub from: Rc<NamedBlock>,
