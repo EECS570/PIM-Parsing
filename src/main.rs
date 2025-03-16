@@ -1,5 +1,6 @@
 mod base_type;
 mod parser;
+mod sem_type;
 mod semantics_analysis;
 use crate::parser::parse_str;
 use anyhow::Result;
