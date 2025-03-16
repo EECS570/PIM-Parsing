@@ -35,9 +35,15 @@ pub struct SemanticEdgeInst {
     pub weight: i32,
 }
 
+pub struct SemanticWalkerInst {
+    pub walker_type: Rc<SemanticWalker>,
+    pub start_node: Rc<SemanticNodeInst>,
+}
+
 pub struct SemanticGraph {
     pub node_insts: Vec<Rc<SemanticNodeInst>>,
     pub edge_insts: Vec<Rc<SemanticEdgeInst>>,
+    pub walker_insts: Vec<Rc<SemanticWalkerInst>>,
 }
 
 pub struct SemanticGlobal {
@@ -143,9 +149,26 @@ fn transform_graph_to_semantic(
                     }))
                 })
                 .collect();
+            let sem_walker_insts_res: Result<Vec<Rc<SemanticWalkerInst>>> = graph
+                .walker_insts
+                .iter()
+                .map(|inst| -> Result<Rc<SemanticWalkerInst>> {
+                    Ok(Rc::new(SemanticWalkerInst {
+                        walker_type: walker_types
+                            .get(&inst.walker_type)
+                            .ok_or(SemanticsError::UndefinedToken(inst.walker_type.clone()))?
+                            .clone(),
+                        start_node: node_hash_map
+                            .get(&inst.start_node)
+                            .ok_or(SemanticsError::UndefinedToken(inst.start_node.clone()))?
+                            .clone(),
+                    }))
+                })
+                .collect();
             Ok(SemanticGraph {
                 node_insts: sem_node_insts,
                 edge_insts: sem_edge_insts_res?,
+                walker_insts: sem_walker_insts_res?,
             })
         })
         .collect();
