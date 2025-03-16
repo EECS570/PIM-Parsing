@@ -1,4 +1,4 @@
-mod base_type_pim;
+mod base_type;
 mod parser;
 mod semantics_analysis;
 use crate::parser::parse_str;

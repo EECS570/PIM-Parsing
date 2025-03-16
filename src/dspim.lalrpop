@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::base_type_pim::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock, Walker, NodeInst, transform_node_inst, EdgeInst, Graph, WalkerInst};
+use crate::base_type::{PIMBaseType, PIMType, PIMField, NamedBlock, Node, Edge, GeneralBlock, Walker, NodeInst, transform_node_inst, EdgeInst, Graph, WalkerInst};
 
 grammar;
 

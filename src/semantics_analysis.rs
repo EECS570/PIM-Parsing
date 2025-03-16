@@ -1,4 +1,4 @@
-use crate::base_type_pim::{Edge, GeneralBlock, Graph, NamedBlock, Walker};
+use crate::base_type::{Edge, GeneralBlock, Graph, NamedBlock, Walker};
 use anyhow::Result;
 use std::collections::HashMap;
 use std::rc::Rc;
