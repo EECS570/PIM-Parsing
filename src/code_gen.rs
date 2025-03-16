@@ -50,9 +50,10 @@ impl TypeCodeGen for sem_type::SemanticEdge {
 pub fn test_node_code_gen() {
     let _node = NamedBlock {
         name: String::from("TestNode"),
-        fields: vec! [
-            PIMField {varname: String::from("field"), pim_type: PIMType::Basic(PIMBaseType::Char)}
-        ]
+        fields: vec![PIMField {
+            varname: String::from("field"),
+            pim_type: PIMType::Basic(PIMBaseType::Char),
+        }],
     };
     _node.type_code();
 }
