@@ -1,7 +1,22 @@
-node hello {
-  number: int8;
-  essay: char[800];
+node Alice {
+  number1: int8;
+  essay1: char[800];
 };
-edge hello hello hedge {
+
+node Bob {
+  number2: int8;
+  essay2: char[800];
+};
+
+edge Alice Bob Friend {
   number: int8;
+};
+
+walker Alice Worker1;
+
+graph {
+    node Alice alice;
+    node Bob bob;
+    edge Friend alice bob 10;
+    walker Worker1 on alice;
 };
