@@ -8,16 +8,24 @@ node Bob {
   essay2: char[800];
 };
 
+node Charlie {
+  number: int8;
+};
+
 edge Alice Bob Friend {
   weight: int8;
   age: int8;
 };
+
 
 walker Alice Worker1;
 
 graph {
     node Alice alice;
     node Bob bob;
+    node Bob bob_2;
+    node Charlie charlie;
     edge Friend alice bob 10;
+    edge Friend alice bob_2 20;
     walker Worker1 on alice;
 };

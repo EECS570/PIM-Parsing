@@ -32,9 +32,9 @@ impl TypeCodeGen for NamedBlock {
         let content: Vec<String> = self.fields.iter().map(|field| field.type_code()).collect();
 
         String::from(format!(
-            "typedef struct _{} {{ \n{}\n}} {}",
+            "typedef struct _{} {{ \n\t{}\n}} {}",
             self.name,
-            content.join("\n"),
+            content.join("\n\t"),
             self.name
         ))
     }
@@ -42,9 +42,26 @@ impl TypeCodeGen for NamedBlock {
 
 impl TypeCodeGen for sem_type::SemanticEdge {
     fn type_code(&self) -> String {
-        self.named_block.type_code()
+        let mut content: Vec<String> = self.named_block.fields
+            .iter()
+            .map(|field| field.type_code())
+            .collect();
+
+        let from_type = &self.from.name;
+        let to_type = &self.to.name;
+
+        content.push(format!("{} from;", from_type));
+        content.push(format!("{} to;", to_type));
+
+        format!(
+            "typedef struct _{} {{\n\t{}\n}} {}",
+            self.named_block.name,
+            content.join("\n\t"),
+            self.named_block.name
+        )
     }
 }
+
 
 #[test]
 pub fn test_node_code_gen() {

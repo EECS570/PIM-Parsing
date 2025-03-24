@@ -30,12 +30,14 @@ pub struct SemanticWalkerInst {
     pub start_node: Rc<SemanticNodeInst>,
 }
 
+#[derive(Clone)]
 pub struct SemanticGraph {
     pub node_insts: Vec<Rc<SemanticNodeInst>>,
     pub edge_insts: Vec<Rc<SemanticEdgeInst>>,
     pub walker_insts: Vec<Rc<SemanticWalkerInst>>,
 }
 
+#[derive(Clone)]
 pub struct SemanticGlobal {
     pub edges: HashMap<String, Rc<SemanticEdge>>,
     pub walkers: HashMap<String, Rc<SemanticWalker>>,

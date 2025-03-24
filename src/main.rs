@@ -101,27 +101,29 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "#include <cstdint>")?;
     writeln!(output_file, "\nusing namespace std;\n")?;
 
-    // First generate struct definitions for nodes
+
+    writeln!(output_file, "// Struct definitions for nodes")?;
     for graph in &sem.graphs {
         for node_inst in &graph.node_insts {
             writeln!(output_file, "{};\n", node_inst.node_type.type_code())?;
         }
     }
 
-    // Generate struct definitions for edges
+    writeln!(output_file, "// Struct definitions for edges")?;
     for (_edge_name, edge) in &sem.edges {
-        writeln!(output_file, "{};\n", edge.named_block.type_code())?;
+        writeln!(output_file, "{};\n", edge.type_code())?;
     }
 
-    // Generate type aliases for walkers
+    writeln!(output_file, "// Struct definitions for walkers")?;
     for (_walker_name, walker) in &sem.walkers {
         writeln!(output_file, "using {} = {};", walker.name, walker.node_type.name)?;
     }
 
-    writeln!(output_file, "int main() {{")?;
+    writeln!(output_file, "\nint main() {{")?;
 
+    
     for graph in &sem.graphs {
-        // Instantiate Nodes
+        writeln!(output_file, "// Instantiate nodes")?;
         for node_inst in &graph.node_insts {
             writeln!(
                 output_file,
@@ -132,24 +134,23 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
         writeln!(output_file)?;
 
-        // Instantiate Edges with weight assignment
+        writeln!(output_file, "// Instantiate edges")?;
         for edge_inst in &graph.edge_insts {
-            let edge_var_name = format!("{}_{}", edge_inst.from_var.varname, edge_inst.to_var.varname);
-            writeln!(
-                output_file,
-                "\t{} {};",
-                edge_inst.edge_type.named_block.name, edge_var_name
-            )?;
-            writeln!(
-                output_file,
-                "\t{}.weight = {};",
-                edge_var_name, edge_inst.weight
-            )?;
+            let edge_name = format!("{}_{}", edge_inst.from_var.varname, edge_inst.to_var.varname);
+            let edge_type_name = &edge_inst.edge_type.named_block.name;
+            let from_var = &edge_inst.from_var.varname;
+            let to_var = &edge_inst.to_var.varname;
+            let weight = edge_inst.weight;
+            
+            writeln!(output_file, "\t{} {};", edge_type_name, edge_name)?;
+            writeln!(output_file, "\t{}.weight = {};", edge_name, weight)?;
+            writeln!(output_file, "\t{}.from = {};", edge_name, from_var)?;
+            writeln!(output_file, "\t{}.to = {};", edge_name, to_var)?;
+            writeln!(output_file)?;
         }
 
-        writeln!(output_file)?;
 
-        // Instantiate Walkers
+        writeln!(output_file, "// Instantiate walkers")?;
         for walker_inst in &graph.walker_insts {
             writeln!(
                 output_file,
