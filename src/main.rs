@@ -8,8 +8,10 @@ use anyhow::Result;
 use base_type::NamedBlock;
 use clap::Parser;
 use code_gen::TypeCodeGen;
+use sem_type::SemanticGlobal;
 use semantics_analysis::semantic_analysis;
 use std::fs;
+use std::io::Write;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -18,16 +20,11 @@ struct Args {
     file: String,
     #[arg(short, long, default_value_t = 1)]
     count: u8,
+    #[arg(short, long, default_value_t = String::from("generated_code.cpp"))]
+    output: String,
 }
 
-fn main() -> Result<()> {
-    let args = Args::parse();
-
-    println!("Reading from: {}", args.file);
-    let file_content = fs::read_to_string(args.file)?;
-    println!("File content: {}", file_content);
-    let sem = semantic_analysis(parse_str(&file_content)?)?;
-
+fn print_info(sem: SemanticGlobal) -> (){
     println!("------------Generating Codes--------------");
     if sem.edges.is_empty() {
         println!("No edges found");
@@ -95,6 +92,88 @@ fn main() -> Result<()> {
             }
         }
     }
+}
+
+fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
+    let mut output_file = fs::File::create(file_name)?;
+
+    writeln!(output_file, "// Generated C++ code")?;
+    writeln!(output_file, "#include <cstdint>")?;
+    writeln!(output_file, "\nusing namespace std;\n")?;
+
+    // First generate struct definitions for nodes
+    for graph in &sem.graphs {
+        for node_inst in &graph.node_insts {
+            writeln!(output_file, "{};\n", node_inst.node_type.type_code())?;
+        }
+    }
+
+    // Generate struct definitions for edges
+    for (_edge_name, edge) in &sem.edges {
+        writeln!(output_file, "{};\n", edge.named_block.type_code())?;
+    }
+
+    // Generate type aliases for walkers
+    for (_walker_name, walker) in &sem.walkers {
+        writeln!(output_file, "using {} = {};", walker.name, walker.node_type.name)?;
+    }
+
+    writeln!(output_file, "int main() {{")?;
+
+    for graph in &sem.graphs {
+        // Instantiate Nodes
+        for node_inst in &graph.node_insts {
+            writeln!(
+                output_file,
+                "\t{} {};",
+                node_inst.node_type.name, node_inst.varname
+            )?;
+        }
+
+        writeln!(output_file)?;
+
+        // Instantiate Edges with weight assignment
+        for edge_inst in &graph.edge_insts {
+            let edge_var_name = format!("{}_{}", edge_inst.from_var.varname, edge_inst.to_var.varname);
+            writeln!(
+                output_file,
+                "\t{} {};",
+                edge_inst.edge_type.named_block.name, edge_var_name
+            )?;
+            writeln!(
+                output_file,
+                "\t{}.weight = {};",
+                edge_var_name, edge_inst.weight
+            )?;
+        }
+
+        writeln!(output_file)?;
+
+        // Instantiate Walkers
+        for walker_inst in &graph.walker_insts {
+            writeln!(
+                output_file,
+                "\t{} walker_on_{};",
+                walker_inst.walker_type.name, walker_inst.start_node.varname
+            )?;
+        }
+    }
+
+    writeln!(output_file, "\treturn 0;")?;
+    writeln!(output_file, "}}")?;
+
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    let args = Args::parse();
+
+    let file_content = fs::read_to_string(args.file)?;
+    let sem = semantic_analysis(parse_str(&file_content)?)?;
+
+    print_info(sem.clone());
+
+    write_to_file(&args.output, &sem).ok();
 
     Ok(())
 }

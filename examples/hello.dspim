@@ -9,7 +9,8 @@ node Bob {
 };
 
 edge Alice Bob Friend {
-  number: int8;
+  weight: int8;
+  age: int8;
 };
 
 walker Alice Worker1;
