@@ -3,6 +3,7 @@ mod code_gen;
 mod parser;
 mod sem_type;
 mod semantics_analysis;
+mod graph_cut;
 use crate::parser::parse_str;
 use anyhow::Result;
 use base_type::NamedBlock;
