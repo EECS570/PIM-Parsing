@@ -1,31 +1,22 @@
 node Alice {
-  number1: int8;
-  essay1: char[800];
+  vec1: int32[128];
+  vec2: int32[128];
 };
 
 node Bob {
-  number2: int8;
-  essay2: char[800];
-};
-
-node Charlie {
-  number: int8;
+  vec1: int32[128];
+  vec2: int32[128];
 };
 
 edge Alice Bob Friend {
-  weight: int8;
-  age: int8;
+  weight: int32;
+  age: int32;
 };
 
-
-walker Alice Worker1;
 
 graph {
     node Alice alice;
     node Bob bob;
-    node Bob bob_2;
-    node Charlie charlie;
+
     edge Friend alice bob 10;
-    edge Friend alice bob_2 20;
-    walker Worker1 on alice;
 };

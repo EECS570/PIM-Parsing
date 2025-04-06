@@ -1,0 +1,9 @@
+node Alice {
+  vec1: int32[128];
+  vec2: int32[128];
+};
+
+graph {
+    node Alice alice;
+
+};

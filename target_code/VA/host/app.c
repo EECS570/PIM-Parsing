@@ -1,8 +1,3 @@
-/**
-* app.c
-* VA Host Application Source File
-*
-*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -20,10 +15,6 @@
 // Define the DPU Binary path as DPU_BINARY here
 #ifndef DPU_BINARY
 #define DPU_BINARY "./bin/dpu_code"
-#endif
-
-#if ENERGY
-#include <dpu_probe.h>
 #endif
 
 // Pointer declaration
@@ -56,11 +47,6 @@ int main(int argc, char **argv) {
 
     struct dpu_set_t dpu_set, dpu;
     uint32_t nr_of_dpus;
-
-#if ENERGY
-    struct dpu_probe_t probe;
-    DPU_ASSERT(dpu_probe_init("energy_probe", &probe));
-#endif
 
     // Allocate DPUs and load binary
     DPU_ASSERT(dpu_alloc(NR_DPUS, NULL, &dpu_set));
@@ -141,16 +127,10 @@ int main(int argc, char **argv) {
         // Run DPU kernel
         if(rep >= p.n_warmup) {
             start(&timer, 2, rep - p.n_warmup);
-            #if ENERGY
-            DPU_ASSERT(dpu_probe_start(&probe));
-            #endif
         }
         DPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));
         if(rep >= p.n_warmup) {
             stop(&timer, 2);
-            #if ENERGY
-            DPU_ASSERT(dpu_probe_stop(&probe));
-            #endif
         }
 
 #if PRINT
@@ -189,11 +169,6 @@ int main(int argc, char **argv) {
     printf("DPU-CPU ");
     print(&timer, 3, p.n_reps);
 
-#if ENERGY
-    double energy;
-    DPU_ASSERT(dpu_probe_get(&probe, DPU_ENERGY, DPU_AVERAGE, &energy));
-    printf("DPU Energy (J): %f\t", energy);
-#endif	
 
     // Check output
     bool status = true;
