@@ -348,15 +348,6 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "\t}}")?;
     
 
-    writeln!(output_file, "\t// Instantiate node Alice")?;
-    writeln!(output_file, "\tAlice alice;")?;
-    writeln!(output_file, "\t// Initialize alice.vec1 and alice.vec2 (example: set all elements to 0)")?;
-    writeln!(output_file, "\tmemset(alice.vec1, 0, sizeof(alice.vec1));")?;
-    writeln!(output_file, "\tmemset(alice.vec2, 0, sizeof(alice.vec2));\n")?;
-    writeln!(output_file, "\n")?;
-    
-    writeln!(output_file, "\t// Call kernel_host to compute: alice.vec2 = alice.vec1 + alice.vec2")?;
-    writeln!(output_file, "\tkernel_host(alice.vec2, alice.vec1, alice.vec2, 128);\n")?;
 
     writeln!(output_file, "\treturn 0;")?;
     writeln!(output_file, "}}")?;
