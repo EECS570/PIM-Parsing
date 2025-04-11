@@ -8,6 +8,7 @@ clap = { version = "4.5.32", features = ["derive"] }
 lalrpop-util = { version = "0.21.0", features = ["lexer", "unicode"] }
 anyhow = { version = "1.0.97" }
 thiserror = "2"
+z3 = {version="0.12", features = ["static-link-z3"]}
 
 # Add a build-time dependency on the lalrpop library:
 [build-dependencies]

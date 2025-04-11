@@ -42,7 +42,9 @@ impl TypeCodeGen for NamedBlock {
 
 impl TypeCodeGen for sem_type::SemanticEdge {
     fn type_code(&self) -> String {
-        let mut content: Vec<String> = self.named_block.fields
+        let mut content: Vec<String> = self
+            .named_block
+            .fields
             .iter()
             .map(|field| field.type_code())
             .collect();
@@ -61,7 +63,6 @@ impl TypeCodeGen for sem_type::SemanticEdge {
         )
     }
 }
-
 
 #[test]
 pub fn test_node_code_gen() {

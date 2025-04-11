@@ -1,9 +1,9 @@
 mod base_type;
 mod code_gen;
+mod graph_cut;
 mod parser;
 mod sem_type;
 mod semantics_analysis;
-mod graph_cut;
 use crate::parser::parse_str;
 use anyhow::Result;
 use base_type::NamedBlock;
@@ -25,7 +25,7 @@ struct Args {
     output: String,
 }
 
-fn print_info(sem: SemanticGlobal) -> (){
+fn print_info(sem: SemanticGlobal) -> () {
     println!("------------Generating Codes--------------");
     if sem.edges.is_empty() {
         println!("No edges found");
@@ -102,7 +102,6 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "#include <cstdint>")?;
     writeln!(output_file, "\nusing namespace std;\n")?;
 
-
     writeln!(output_file, "// Struct definitions for nodes")?;
     for graph in &sem.graphs {
         for node_inst in &graph.node_insts {
@@ -117,12 +116,15 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
     writeln!(output_file, "// Struct definitions for walkers")?;
     for (_walker_name, walker) in &sem.walkers {
-        writeln!(output_file, "using {} = {};", walker.name, walker.node_type.name)?;
+        writeln!(
+            output_file,
+            "using {} = {};",
+            walker.name, walker.node_type.name
+        )?;
     }
 
     writeln!(output_file, "\nint main() {{")?;
 
-    
     for graph in &sem.graphs {
         writeln!(output_file, "// Instantiate nodes")?;
         for node_inst in &graph.node_insts {
@@ -137,19 +139,21 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
         writeln!(output_file, "// Instantiate edges")?;
         for edge_inst in &graph.edge_insts {
-            let edge_name = format!("{}_{}", edge_inst.from_var.varname, edge_inst.to_var.varname);
+            let edge_name = format!(
+                "{}_{}",
+                edge_inst.from_var.varname, edge_inst.to_var.varname
+            );
             let edge_type_name = &edge_inst.edge_type.named_block.name;
             let from_var = &edge_inst.from_var.varname;
             let to_var = &edge_inst.to_var.varname;
             let weight = edge_inst.weight;
-            
+
             writeln!(output_file, "\t{} {};", edge_type_name, edge_name)?;
             writeln!(output_file, "\t{}.weight = {};", edge_name, weight)?;
             writeln!(output_file, "\t{}.from = {};", edge_name, from_var)?;
             writeln!(output_file, "\t{}.to = {};", edge_name, to_var)?;
             writeln!(output_file)?;
         }
-
 
         writeln!(output_file, "// Instantiate walkers")?;
         for walker_inst in &graph.walker_insts {
