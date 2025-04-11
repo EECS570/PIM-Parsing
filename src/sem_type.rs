@@ -22,7 +22,7 @@ pub struct SemanticEdgeInst {
     pub edge_type: Rc<SemanticEdge>,
     pub from_var: Rc<SemanticNodeInst>,
     pub to_var: Rc<SemanticNodeInst>,
-    pub weight: i32,
+    pub weight: i64,
 }
 
 pub struct SemanticWalkerInst {

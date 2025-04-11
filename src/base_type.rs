@@ -1,5 +1,5 @@
 pub trait Size {
-    fn size_byte(&self) -> i32;
+    fn size_byte(&self) -> i64;
 }
 #[derive(Debug, PartialEq, Clone)]
 pub enum PIMBaseType {
@@ -13,7 +13,7 @@ pub enum PIMBaseType {
 }
 
 impl Size for PIMBaseType {
-    fn size_byte(&self) -> i32 {
+    fn size_byte(&self) -> i64 {
         match self {
             PIMBaseType::Int8 => 1,
             PIMBaseType::Int16 => 2,
@@ -29,11 +29,11 @@ impl Size for PIMBaseType {
 #[derive(Debug, PartialEq, Clone)]
 pub enum PIMType {
     Basic(PIMBaseType),
-    Array(PIMBaseType, i32),
+    Array(PIMBaseType, i64),
 }
 
 impl Size for PIMType {
-    fn size_byte(&self) -> i32 {
+    fn size_byte(&self) -> i64 {
         match self {
             PIMType::Basic(t) => t.size_byte(),
             PIMType::Array(t, num) => t.size_byte() * num,
@@ -48,7 +48,7 @@ pub struct PIMField {
 }
 
 impl Size for PIMField {
-    fn size_byte(&self) -> i32 {
+    fn size_byte(&self) -> i64 {
         self.pim_type.size_byte()
     }
 }
@@ -60,7 +60,7 @@ pub struct NamedBlock {
 }
 
 impl Size for NamedBlock {
-    fn size_byte(&self) -> i32 {
+    fn size_byte(&self) -> i64 {
         self.fields.iter().map(|field| field.size_byte()).sum()
     }
 }
@@ -103,7 +103,7 @@ pub struct EdgeInst {
     pub edge_type: String,
     pub from_varname: String,
     pub to_varname: String,
-    pub weight: i32,
+    pub weight: i64,
 }
 
 #[derive(Debug, Clone)]
