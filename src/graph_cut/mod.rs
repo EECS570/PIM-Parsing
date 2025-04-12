@@ -1,7 +1,7 @@
 use crate::{
-    base_type::{NamedBlock, Size}, 
-    parser::parse_str, 
-    sem_type::{SemanticEdgeInst, SemanticNodeInst}, 
+    base_type::{NamedBlock, Size},
+    parser::parse_str,
+    sem_type::{SemanticEdgeInst, SemanticNodeInst},
     semantics_analysis::semantic_analysis,
 };
 use anyhow::Result;
