@@ -1,6 +1,8 @@
 use crate::{
-    base_type::{NamedBlock, Size},
-    sem_type::{SemanticEdgeInst, SemanticNodeInst},
+    base_type::{NamedBlock, Size}, 
+    parser::parse_str, 
+    sem_type::{SemanticEdgeInst, SemanticNodeInst}, 
+    semantics_analysis::semantic_analysis,
 };
 use anyhow::Result;
 use std::collections::HashMap;
@@ -10,6 +12,8 @@ use z3::{
     ast::{Ast, Bool, Int, BV},
     Config, Context, Optimize, SatResult,
 };
+
+use std::fs;
 
 #[derive(Error, Debug)]
 pub enum DataMappingError {
@@ -124,23 +128,10 @@ fn assign_with_z3(
 
 #[test]
 
-fn test_z3() {
-    let nb = Rc::new(NamedBlock {
-        name: String::from(""),
-        fields: vec![],
-    });
-    let u: Vec<Rc<SemanticNodeInst>> = vec![
-        Rc::new(SemanticNodeInst {
-            varname: String::from("n1"),
-            node_type: nb.clone(),
-        }),
-        Rc::new(SemanticNodeInst {
-            varname: String::from("n2"),
-            node_type: nb.clone(),
-        }),
-        Rc::new(SemanticNodeInst {
-            varname: String::from("n3"),
-            node_type: nb.clone(),
-        }),
-    ];
+fn test_z3() -> Result<()> {
+    let file_context = fs::read_to_string(String::from("examples/test_dm.dspim"))?;
+    let sm = semantic_analysis(parse_str(&file_context)?)?;
+    let g = sm.graphs[0].clone();
+    assign_with_z3(g.node_insts, g.edge_insts, 3, 3)?;
+    Ok(())
 }

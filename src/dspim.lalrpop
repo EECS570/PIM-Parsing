@@ -156,7 +156,10 @@ pub GeneralRule: Vec<GeneralBlock> = {
   }
 }
 
-Num: i64 = <s:r"[0-9]+"> => i64::from_str(s).unwrap();
+Num: i64 = {
+  <s:r"[0-9]+"> => i64::from_str(s).unwrap(),
+  "-" <s:r"[0-9]+"> => 0 - i64::from_str(s).unwrap(),
+};
 
 
 pub Term: i64 = {

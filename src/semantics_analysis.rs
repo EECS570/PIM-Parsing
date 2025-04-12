@@ -10,7 +10,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum SemanticsError {
-    #[error("Token `{0}` is not undefined.")]
+    #[error("Token `{0}` is not defined.")]
     UndefinedToken(String),
     #[error("Unknown error.")]
     Unknown,

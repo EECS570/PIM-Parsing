@@ -1,0 +1,26 @@
+node Alice {
+    n1: int8;
+};
+
+node Bob {
+    n1: int16;
+};
+
+edge Alice Alice Self {
+    n1: int8;
+};
+
+edge Bob Bob SelfB {
+    n1: int8;
+};
+
+graph {
+    node Alice a0;
+    node Alice a1;
+    node Alice a2;
+    node Bob b0;
+    node Bob b1;
+    edge Self a1 a2 10;
+    edge Self a0 a1 15;
+    edge SelfB b0 b1 100;
+};
