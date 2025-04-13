@@ -3,7 +3,7 @@
 #define T int32_t
 
 
-static void kernel_dpu(T *bufferB, T *bufferA, unsigned int l_size) {
+static void kernel_dpu(T *bufferA, T *bufferB, unsigned int l_size) {
     for (unsigned int i = 0; i < l_size; i++){
         bufferB[i] += bufferA[i];
     }

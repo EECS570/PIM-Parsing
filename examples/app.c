@@ -175,5 +175,6 @@ int main(int argc, char **argv) {
 	free(alice_vec1_val);
 	free(alice_vec2_val);
 	DPU_ASSERT(dpu_free(dpu_set));
+
 	return status ? 0 : -1;
 }

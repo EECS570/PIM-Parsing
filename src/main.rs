@@ -464,6 +464,112 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 }
 
 
+fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
+    let mut output_file = fs::File::create(file_name)?;
+
+    // Write header includes.
+    writeln!(output_file, "// Generated C code")?;
+    writeln!(output_file, "#include <stdint.h>")?;
+    writeln!(output_file, "#include <stdio.h>")?;
+    writeln!(output_file, "#include <defs.h>")?;
+    writeln!(output_file, "#include <mram.h>")?;
+    writeln!(output_file, "#include <alloc.h>")?;
+    writeln!(output_file, "#include <perfcounter.h>")?;
+    writeln!(output_file, "#include <barrier.h>")?;
+    writeln!(output_file, "#include \"kernel.c\"\n")?;
+
+    writeln!(output_file, "#include <../support/common.h>")?;
+
+    writeln!(output_file, "__host dpu_arguments_t DPU_INPUT_ARGUMENTS;\n")?;
+
+    // Barrier declaration
+    writeln!(output_file, "BARRIER_INIT(my_barrier, NR_TASKLETS);\n")?;
+
+    writeln!(output_file, "extern int main_kernel1(void);\n")?;
+    writeln!(output_file, "int (*kernels[nr_kernels])(void) = {{main_kernel1}};\n")?;
+    writeln!(output_file, "int main(void) {{\n\treturn kernels[DPU_INPUT_ARGUMENTS.kernel](); \n}}\n")?;
+    
+    // main_kernel1
+    writeln!(output_file, "int main_kernel1() {{")?;
+    writeln!(output_file, "\tunsigned int tasklet_id = me();")?;
+    writeln!(output_file, "\tif (tasklet_id == 0){{mem_reset();}}\n")?;
+    writeln!(output_file, "\tbarrier_wait(&my_barrier);\n")?;
+    writeln!(output_file, "\tuint32_t input_size_dpu_bytes = DPU_INPUT_ARGUMENTS.size; // Input size per DPU in bytes")?;
+    writeln!(output_file, "\tuint32_t input_size_dpu_bytes_transfer = DPU_INPUT_ARGUMENTS.transfer_size; // Transfer input size per DPU in bytes\n")?;
+    writeln!(output_file, "\t// Address of the current processing block in MRAM")?;
+    writeln!(output_file, "\tuint32_t base_tasklet = tasklet_id << BLOCK_SIZE_LOG2;")?;
+
+    writeln!(output_file, "\tint i = 0;")?;
+    for node_inst in &sem.graphs[0].node_insts {
+        for field in &node_inst.node_type.fields {
+            if let PIMType::Array(base_type, _) = &field.pim_type {
+                let node_name = node_inst.varname.clone();
+                let field_name = field.varname.clone();
+                let pointer_name = format!("{}_{}", node_name, field_name);
+                
+                writeln!(output_file, "\tuint32_t mram_base_addr_{} = (uint32_t)(DPU_MRAM_HEAP_POINTER + input_size_dpu_bytes_transfer * i);", pointer_name)?;
+                writeln!(output_file, "\ti ++;")?;
+            }
+        }
+    }
+    
+    writeln!(output_file, "\n\t// Initialize a local cache to store the MRAM block")?;
+
+    for node_inst in &sem.graphs[0].node_insts {
+        for field in &node_inst.node_type.fields {
+            if let PIMType::Array(base_type, _) = &field.pim_type {
+                let node_name = node_inst.varname.clone();
+                let field_name = field.varname.clone();
+                let pointer_name = format!("{}_{}", node_name, field_name);
+                writeln!(output_file, "\t{} *cache_{} = ({} *) mem_alloc(BLOCK_SIZE);", base_type.type_code(), pointer_name, base_type.type_code())?;
+            }
+        }
+    }
+
+    writeln!(output_file, "\tfor(unsigned int byte_index = base_tasklet; byte_index < input_size_dpu_bytes; byte_index += BLOCK_SIZE * NR_TASKLETS){{\n")?;
+    
+    // Bound checking
+    writeln!(output_file, "\t\tuint32_t l_size_bytes = (byte_index + BLOCK_SIZE >= input_size_dpu_bytes) ? (input_size_dpu_bytes - byte_index) : BLOCK_SIZE;\n")?;
+    
+
+    let mut name_list = vec![];
+    // Load cache with current MRAM block
+    for node_inst in &sem.graphs[0].node_insts {
+        for field in &node_inst.node_type.fields {
+            if let PIMType::Array(base_type, _) = &field.pim_type {
+                let node_name = node_inst.varname.clone();
+                let field_name = field.varname.clone();
+                let pointer_name = format!("{}_{}", node_name, field_name);
+                writeln!(output_file, "\t\tmram_read((__mram_ptr void const*)(mram_base_addr_{} + byte_index), cache_{}, l_size_bytes);", pointer_name, pointer_name)?;
+                name_list.push(format!("{}", pointer_name));
+            }
+        }
+    }
+
+    // Computer kernel on dpu
+    writeln!(output_file, "\t\tkernel_dpu(")?;
+    for (i, cache) in name_list.iter().enumerate() {
+        if i == name_list.len() - 1 {
+            writeln!(output_file, "\t\t\tcache_{}, \n\t\t\tl_size_bytes >> DIV);\n", cache)?;
+        } else {
+            writeln!(output_file, "\t\t\tcache_{},", cache)?;
+        }
+    }
+
+    // Write cache to current MRAM block
+    if let Some(last_name) = name_list.last() {
+        writeln!(output_file, "\t\tmram_write(cache_{}, (__mram_ptr void*)(mram_base_addr_{} + byte_index), l_size_bytes);", last_name, last_name)?;
+    } 
+
+    writeln!(output_file, "\n\t}}\n")?;
+
+    writeln!(output_file, "return 0;\n}}")?;
+
+
+    Ok(())
+}
+
+
 fn main() -> Result<()> {
     let args = Args::parse();
 
@@ -474,5 +580,6 @@ fn main() -> Result<()> {
 
     write_to_file(&args.output, &sem).ok();
     write_to_app("./examples/app.c", &sem).ok();
+    write_to_task("./examples/task.c", &sem).ok();
     Ok(())
 }
