@@ -6,8 +6,7 @@ mod semantics_analysis;
 mod graph_cut;
 use crate::parser::parse_str;
 use anyhow::Result;
-use base_type::PIMType;
-use base_type::NamedBlock;
+use base_type::{Size, PIMField, PIMType, PIMBaseType};
 use clap::Parser;
 use code_gen::TypeCodeGen;
 use sem_type::SemanticGlobal;
@@ -189,9 +188,9 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "#include <assert.h>")?;
     writeln!(output_file, "#include \"kernel.c\"\n")?;
 
-    writeln!(output_file, "#include <common.h>")?;
-    writeln!(output_file, "#include <timer.h>")?;
-    writeln!(output_file, "#include <params.h>\n")?;
+    writeln!(output_file, "#include <../support/common.h>")?;
+    writeln!(output_file, "#include <../support/timer.h>")?;
+    writeln!(output_file, "#include <../support/params.h>\n")?;
 
     // Define the DPU Binary path as DPU_BINARY here
     writeln!(output_file, "#ifndef DPU_BINARY")?;
@@ -255,14 +254,30 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
         }
     }
 
+    let mut node_pointer_list = vec![];
+    let mut node_pointer_val_list = vec![];
+    let mut size_byte_dict = std::collections::HashMap::new();
+
     // Pointer declaration
     writeln!(output_file, "// Pointer declaration")?;
     for node_inst in &sem.graphs[0].node_insts {
         for field in &node_inst.node_type.fields {
             if let PIMType::Array(base_type, _) = &field.pim_type {
                 writeln!(output_file, "static {}* {}_{};", base_type.type_code(), node_inst.varname ,field.varname)?;
+                writeln!(output_file, "//PIM_Size: {} byte", field.size_byte())?;
+                let node_name = node_inst.varname.clone();
+                let field_name = field.varname.clone();
+                let pointer_name = format!("{}_{}", node_name, field_name);
+                node_pointer_list.push(format!("{}_{}", node_name, field_name));
+                node_pointer_val_list.push(format!("{}_{}_val", node_name, field_name));
+                size_byte_dict.insert(pointer_name, field.size_byte());
             }
         }
+    }
+
+    // Print the size of each pointer
+    for (key, value) in &size_byte_dict {
+        println!("Pointer: {}, Size: {} bytes", key, value);
     }
 
     writeln!(output_file, "// Create input arrays TBD")?;
@@ -278,9 +293,13 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "\tDPU_ASSERT(dpu_load(dpu_set, DPU_BINARY, NULL));")?;
     writeln!(output_file, "\tDPU_ASSERT(dpu_get_nr_dpus(dpu_set, &nr_of_dpus));")?;
     writeln!(output_file, "\tprintf(\"Allocated %d DPU(s)\\n\", nr_of_dpus);")?;
-    writeln!(output_file, "\tunsigned int i = 0;\n")?;
-    writeln!(output_file, "\tconst unsigned int input_size_8bytes = p.input_size;")?;
+    writeln!(output_file, "\tunsigned int i = 0;\n\n")?;
+
+    writeln!(output_file, "\tconst unsigned int input_size = p.exp == 0 ? p.input_size * nr_of_dpus : p.input_size; // Total input size (weak or strong scaling)\n")?;
+
+    writeln!(output_file, "\tconst unsigned int input_size_8bytes = input_size;")?;
     writeln!(output_file, "\tconst unsigned int input_size_dpu_8bytes = divceil(input_size, nr_of_dpus);")?;
+
     writeln!(output_file, "\n")?;
 
     writeln!(output_file, "\t// Input/output allocation and initialization")?;
@@ -296,10 +315,15 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
                     0
                 };
                 writeln!(output_file, "\t{}_{} = malloc({} * nr_of_dpus * sizeof({}));", node_name, field_name, nr_elements, type_name)?;
+                writeln!(output_file, "\t{}_{}_val = malloc({} * nr_of_dpus * sizeof({}));", node_name, field_name, nr_elements, type_name)?;
                 writeln!(output_file, "\t{}* buffer_{}_{} = {}_{};", type_name, node_name, field_name, node_name, field_name)?;
             }
         }
     }
+
+    let input_size_bytes = size_byte_dict.values().cloned().max().unwrap_or(0);
+    println!("Maximum size in bytes: {}", input_size_bytes);
+    writeln!(output_file, "\n\tdpu_input_size_bytes = {}/nr_of_dpus;\n", input_size_bytes)?;
 
     // Input data
     for node_inst in &sem.graphs[0].node_insts {
@@ -326,30 +350,114 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
     // Loop over main kernel
     writeln!(output_file, "\tfor(int rep = 0; rep < p.n_warmup + p.n_reps; rep++) {{")?;
+    
+    // compute on CPU
+    writeln!(output_file, "\t\t// Compute output on CPU (performance comparison and verification purposes)")?;
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup)")?;
+    writeln!(output_file, "\t\t\tstart(&timer, 0, rep - p.n_warmup);")?;
+    writeln!(output_file, "\t\tkernel_host(")?;
+    for (i, pointer_val) in node_pointer_val_list.iter().enumerate() {
+        if i == node_pointer_val_list.len() - 1 {
+            writeln!(output_file, "\t\t\t{},", pointer_val)?;
+        } else {
+            writeln!(output_file, "\t\t\t{},", pointer_val)?;
+        }
+    }
+    writeln!(output_file, "\t\t\tinput_size);\n")?;
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup)\n\t\tstop(&timer, 0);\n")?;
+
     writeln!(output_file, "\t\tprintf(\"Load input data\\n\");")?;
     writeln!(output_file, "\t\tif(rep >= p.n_warmup)")?;
     writeln!(output_file, "\t\t\tstart(&timer, 1, rep - p.n_warmup);")?;
     writeln!(output_file, "\t\t// Input arguments")?;
     writeln!(output_file, "\t\tunsigned int kernel = 0;")?;
     writeln!(output_file, "\t\tdpu_arguments_t input_arguments[NR_DPUS];\n")?;
-    writeln!(output_file, "\t\tfor(i=0; i<nr_of_dpus-1; i++) {{")?;
-    writeln!(output_file, "\t\t\t")?;
-    writeln!(output_file, "\t\t\t")?;
-    writeln!(output_file, "\t\t\t")?;
+    writeln!(output_file, "\t\tfor(i=0; i<nr_of_dpus; i++) {{")?;
+    writeln!(output_file, "\t\t\tinput_arguments[i].size=dpu_input_size_bytes;")?;
+    writeln!(output_file, "\t\t\tinput_arguments[i].transfer_size=dpu_input_size_bytes;")?;
+    writeln!(output_file, "\t\t\tinput_arguments[i].kernel=kernel_dpu;")?;
     writeln!(output_file, "\t\t}}")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
-    writeln!(output_file, "\t\t")?;
+
+    // Copy input arrays
+    writeln!(output_file, "\t\t// Copy input arrays")?;
+    writeln!(output_file, "\t\ti = 0;")?;
+    writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
+    \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, &input_arguments[i]));\n\t\t}}")?;
+    writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, \"DPU_INPUT_ARGUMENTS\", 0, sizeof(input_arguments[0]), DPU_XFER_DEFAULT));\n")?;
+    
+    writeln!(output_file, "\t\t int last_loc = 0;")?;
+    for p in &node_pointer_list {
+        writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
+            \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, buffer_{} + input_size_dpu_8bytes * i));\n\t\t}}", p)?;
+
+        writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, last_loc, dpu_input_size_bytes, DPU_XFER_DEFAULT));\n")?;
+        if (p != node_pointer_list.last().unwrap()) {
+            writeln!(output_file, "\t\tlast_loc += dpu_input_size_bytes;\n")?;
+        }
+    }
+
+    writeln!(output_file, "\n\t\tif(rep >= p.n_warmup) \n\t\t\tstop(&timer, 1);")?;
+
+    writeln!(output_file, "\t\tprintf(\"Run program on DPU(s)\\n\");")?;
+    // Run DPU kernel
+    writeln!(output_file, "\t\t// Run DPU kernel")?;
+
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup) {{\n\t\t\tstart(&timer, 2, rep - p.n_warmup);}}")?;
+
+    writeln!(output_file, "\t\tDPU_ASSERT(dpu_launch(dpu_set, DPU_SYNCHRONOUS));")?;
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup) {{\n\t\t\tstop(&timer, 2);}}\n\n")?;
+
+    writeln!(output_file, "#if PRINT")?;
+    writeln!(output_file, "        {{")?;
+    writeln!(output_file, "            unsigned int each_dpu = 0;")?;
+    writeln!(output_file, "            printf(\"Display DPU Logs\\n\");")?;
+    writeln!(output_file, "            DPU_FOREACH (dpu_set, dpu) {{")?;
+    writeln!(output_file, "                printf(\"DPU#%d:\\n\", each_dpu);")?;
+    writeln!(output_file, "                DPU_ASSERT(dpulog_read_for_dpu(dpu.dpu, stdout));")?;
+    writeln!(output_file, "                each_dpu++;")?;
+    writeln!(output_file, "            }}")?;
+    writeln!(output_file, "        }}")?;
+    writeln!(output_file, "#endif\n")?;
+    
+    writeln!(output_file, "\t\tprintf(\"Retrieve results\\n\");")?;
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup)\n\t\t\tstart(&timer, 3, rep - p.n_warmup);")?;
+    writeln!(output_file, "\t\ti = 0;")?;
+
+    writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{\n\t\t\tDPU_ASSERT(dpu_prepare_xfer(dpu, {} + input_size_dpu_8bytes * i));}}", node_pointer_val_list.last().unwrap())?;
+    writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, last_loc, dpu_input_size_bytes, DPU_XFER_DEFAULT));")?;
+    writeln!(output_file, "\t\tif(rep >= p.n_warmup) stop(&timer, 3);\n")?;
     writeln!(output_file, "\t}}")?;
     
 
+    writeln!(output_file, "\tprintf(\"CPU \");")?;
+    writeln!(output_file, "\tprint(&timer, 0, p.n_reps);")?;
+    writeln!(output_file, "\tprintf(\"CPU-DPU \");")?;
+    writeln!(output_file, "\tprint(&timer, 1, p.n_reps);")?;
+    writeln!(output_file, "\tprintf(\"DPU Kernel \");")?;
+    writeln!(output_file, "\tprint(&timer, 2, p.n_reps);")?;
+    writeln!(output_file, "\tprintf(\"DPU-CPU \");")?;
+    writeln!(output_file, "\tprint(&timer, 3, p.n_reps);\n")?;
 
-    writeln!(output_file, "\treturn 0;")?;
+
+    writeln!(output_file, "\tbool status = true;")?;
+    writeln!(output_file, "\tfor (i = 0; i < input_size; i++) {{")?;
+    if let Some(last_pointer) = node_pointer_list.last() {
+        writeln!(output_file, "\t\tif({}[i] != buffer_{}[i])  {{status = false;}}", last_pointer, last_pointer)?;
+    }
+    writeln!(output_file, "\t}}\n")?;
+
+    // Deallocation
+    writeln!(output_file, "\t// Deallocation")?;
+
+    for p in &node_pointer_list {
+        writeln!(output_file, "\tfree({});", p)?;
+    }
+    for p in &node_pointer_val_list {
+        writeln!(output_file, "\tfree({});", p)?;
+    }
+    writeln!(output_file, "\tDPU_ASSERT(dpu_free(dpu_set));\n")?;
+
+    writeln!(output_file, "\treturn status ? 0 : -1;")?;
     writeln!(output_file, "}}")?;
 
     Ok(())

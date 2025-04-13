@@ -27,7 +27,7 @@ static void usage() {
 
 struct Params input_params(int argc, char **argv) {
     struct Params p;
-    p.input_size    = 2621440;
+    p.input_size    = 128;
     p.n_warmup      = 1;
     p.n_reps        = 3;
     p.exp           = 0;

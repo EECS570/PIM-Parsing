@@ -10,9 +10,9 @@ static void kernel_dpu(T *bufferB, T *bufferA, unsigned int l_size) {
 }
 
 
-static void kernel_host(T* C, T* A, T* B, unsigned int nr_elements) {
+static void kernel_host(T* A, T* B, unsigned int nr_elements) {
     for (unsigned int i = 0; i < nr_elements; i++) {
-        C[i] = A[i] + B[i];
+        B[i] += A[i];
     }
 }
 
