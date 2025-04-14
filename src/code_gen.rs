@@ -294,7 +294,7 @@ pub fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, &input_arguments[i]));\n\t\t}}")?;
     writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, \"DPU_INPUT_ARGUMENTS\", 0, sizeof(input_arguments[0]), DPU_XFER_DEFAULT));\n")?;
     
-    writeln!(output_file, "\t\t int last_loc = 0;")?;
+    writeln!(output_file, "\t\tint last_loc = 0;")?;
     for p in &node_pointer_list {
         writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
             \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, buffer_{} + input_size_dpu_8bytes * i));\n\t\t}}", p)?;

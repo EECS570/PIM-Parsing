@@ -3,20 +3,6 @@ node Alice {
   vec2: int32[128];
 };
 
-node Bob {
-  vec1: int32[128];
-  vec2: int32[128];
-};
-
-edge Alice Bob Friend {
-  weight: int32;
-  age: int32;
-};
-
-
 graph {
     node Alice alice;
-    node Bob bob;
-
-    edge Friend alice bob 10;
 };
