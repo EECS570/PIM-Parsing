@@ -1,4 +1,4 @@
-use crate::base_type::{GeneralBlock, PIMBaseType, PIMType};
+use crate::base_type::{GeneralBlock};
 use anyhow::Result;
 use lalrpop_util::lalrpop_mod;
 

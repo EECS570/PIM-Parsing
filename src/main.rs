@@ -6,12 +6,12 @@ mod semantics_analysis;
 mod graph_cut;
 use crate::parser::parse_str;
 use anyhow::Result;
-use base_type::{Size, PIMField, PIMType, PIMBaseType};
 use clap::Parser;
 use code_gen::TypeCodeGen;
+use code_gen::write_to_task;
+use code_gen::write_to_app;
 use sem_type::SemanticGlobal;
 use semantics_analysis::semantic_analysis;
-use std::clone;
 use std::fs;
 use std::io::Write;
 
@@ -170,7 +170,7 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     Ok(())
 }
 
-
+/* 
 fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     let mut output_file = fs::File::create(file_name)?;
 
@@ -465,6 +465,7 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
 
 fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
+
     let mut output_file = fs::File::create(file_name)?;
 
     // Write header includes.
@@ -569,6 +570,7 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     Ok(())
 }
 
+*/
 
 fn main() -> Result<()> {
     let args = Args::parse();
