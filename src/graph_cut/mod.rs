@@ -60,7 +60,7 @@ fn construct_result(
     return Ok(result);
 }
 
-fn assign_with_z3(
+pub fn assign_with_z3(
     unions: &Vec<Rc<SemanticNodeInst>>,
     edges: &Vec<Rc<SemanticEdgeInst>>,
     core_size: i64,

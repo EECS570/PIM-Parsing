@@ -9,6 +9,7 @@ use anyhow::Result;
 use base_type::NamedBlock;
 use clap::Parser;
 use code_gen::TypeCodeGen;
+use graph_cut::assign_with_z3;
 use sem_type::SemanticGlobal;
 use semantics_analysis::semantic_analysis;
 use std::fs;
@@ -178,6 +179,8 @@ fn main() -> Result<()> {
     let sem = semantic_analysis(parse_str(&file_content)?)?;
 
     print_info(sem.clone());
+    let g = &sem.graphs[0];
+    let assignment = assign_with_z3(&g.node_insts, &g.edge_insts, 64 * 1024 * 1024, 100);
 
     write_to_file(&args.output, &sem).ok();
 
