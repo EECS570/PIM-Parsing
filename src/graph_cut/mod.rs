@@ -5,8 +5,8 @@ use crate::{
     semantics_analysis::semantic_analysis,
 };
 use anyhow::Result;
-use std::collections::HashMap;
 use std::rc::Rc;
+use std::{collections::HashMap, f32::consts::E};
 use thiserror::Error;
 use z3::{
     ast::{Ast, Bool, Int, BV},
@@ -61,8 +61,8 @@ fn construct_result(
 }
 
 fn assign_with_z3(
-    unions: Vec<Rc<SemanticNodeInst>>,
-    edges: Vec<Rc<SemanticEdgeInst>>,
+    unions: &Vec<Rc<SemanticNodeInst>>,
+    edges: &Vec<Rc<SemanticEdgeInst>>,
     core_size: i64,
     core_num: i64,
 ) -> Result<Vec<Vec<Rc<SemanticNodeInst>>>> {
@@ -103,6 +103,22 @@ fn assign_with_z3(
             // let weighted = node.mul(&[&Int::from_i64(&ctx, weights[i] as i64)]);
             total_weight = total_weight + node_size_in_core;
         }
+
+        // Calculate all edges
+        for edge in edges {
+            let from_id = find_node_with_name(&xs, edge.from_var.varname.clone())?;
+            let to_id = find_node_with_name(&xs, edge.to_var.varname.clone())?;
+            let list = [
+                &Int::from_i64(&context, j)._eq(&xs[from_id].1),
+                &Int::from_i64(&context, j)._eq(&xs[to_id].1),
+            ];
+            let edge_in_core = Bool::or(&context, &list);
+            let edge_weight = edge_in_core.ite(
+                &Int::from_i64(&context, edge.edge_type.named_block.size_byte()),
+                &Int::from_i64(&context, 0),
+            );
+            total_weight = total_weight + edge_weight;
+        }
         // The total weight must be <= capacity of bag j.
         let capacity_expr = Int::from_i64(&context, core_size);
         let capacity_constraint = total_weight.le(&capacity_expr);
@@ -132,6 +148,6 @@ fn test_z3() -> Result<()> {
     let file_context = fs::read_to_string(String::from("examples/test_dm.dspim"))?;
     let sm = semantic_analysis(parse_str(&file_context)?)?;
     let g = sm.graphs[0].clone();
-    assign_with_z3(g.node_insts, g.edge_insts, 3, 3)?;
+    assign_with_z3(&g.node_insts, &g.edge_insts, 3, 3)?;
     Ok(())
 }
