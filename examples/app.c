@@ -108,7 +108,7 @@ int main(int argc, char **argv) {
 		}
 		DPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, "DPU_INPUT_ARGUMENTS", 0, sizeof(input_arguments[0]), DPU_XFER_DEFAULT));
 
-		 int last_loc = 0;
+		int last_loc = 0;
 		DPU_FOREACH(dpu_set, dpu, i) { 
             		DPU_ASSERT(dpu_prepare_xfer(dpu, buffer_alice_vec1 + input_size_dpu_8bytes * i));
 		}
