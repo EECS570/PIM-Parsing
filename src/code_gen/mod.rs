@@ -1,182 +1,86 @@
-mod base_type;
-mod code_gen;
-mod graph_cut;
-mod parser;
-mod sem_type;
-mod semantics_analysis;
-use crate::parser::parse_str;
-use anyhow::Result;
-use clap::Parser;
-use code_gen::TypeCodeGen;
-use graph_cut::assign_with_z3;
-use code_gen::write_to_task;
-use code_gen::write_to_app;
+use crate::base_type::{NamedBlock, PIMBaseType, PIMField, PIMType, Size};
+use crate::sem_type;
 use sem_type::SemanticGlobal;
-use semantics_analysis::semantic_analysis;
 use std::fs;
-use std::io::Write;
+use std::io::{Write, Result};
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    #[arg(short, long)]
-    file: String,
-    #[arg(short, long, default_value_t = 1)]
-    count: u8,
-    #[arg(short, long, default_value_t = String::from("generated_code.cpp"))]
-    output: String,
+pub trait TypeCodeGen {
+    fn type_code(&self) -> String;
 }
 
-fn print_info(sem: SemanticGlobal) -> () {
-    println!("------------Generating Codes--------------");
-    if sem.edges.is_empty() {
-        println!("No edges found");
-    } else {
-        println!("Generated Edges Code:");
-        for (edge_name, edge_rc) in &sem.edges {
-            let edge_from = edge_rc.from.as_ref().clone().type_code();
-            let edge_to = edge_rc.to.as_ref().clone().type_code();
-
-            println!(
-                "Edge '{}':\nFrom: {}\nTo: {}",
-                edge_name, edge_from, edge_to
-            );
-        }
+impl TypeCodeGen for PIMBaseType {
+    fn type_code(&self) -> String {
+        String::from(match self {
+            PIMBaseType::Int8 => "int8_t",
+            PIMBaseType::Int16 => "int16_t",
+            PIMBaseType::Int32 => "int32_t",
+            PIMBaseType::Int64 => "int64_t",
+            PIMBaseType::Char => "char",
+            PIMBaseType::Float => "float",
+            PIMBaseType::Double => "double",
+        })
     }
+}
 
-    if sem.walkers.is_empty() {
-        println!("No walkers found");
-    } else {
-        println!("Generated Walkers Code:");
-        for (walker_name, walker_rc) in &sem.walkers {
-            let walker_node_type = walker_rc.node_type.as_ref().clone().type_code();
-
-            println!("Walker '{}':\nNode Type: {}", walker_name, walker_node_type);
-        }
-    }
-
-    if sem.graphs.is_empty() {
-        println!("No graphs found");
-    } else {
-        println!("Generated Graphs Code:");
-        for graph in &sem.graphs {
-            println!("Graph:");
-            for node_inst in &graph.node_insts {
-                let node_inst_node_type = node_inst.node_type.as_ref().clone().type_code();
-                let node_inst_varname = node_inst.varname.clone();
-                println!(
-                    "----Node Instance:----\nVarname: {}\nNode Type: {}",
-                    node_inst_varname, node_inst_node_type
-                );
-            }
-            for edge_inst in &graph.edge_insts {
-                let edge_inst_edge_type = edge_inst.edge_type.as_ref().type_code();
-                let edge_inst_from_var = edge_inst.from_var.as_ref().varname.clone();
-                let edge_inst_to_var = edge_inst.to_var.as_ref().varname.clone();
-                let edge_inst_weight = edge_inst.weight;
-                println!(
-                    "----Edge Instance:----\nFrom Node: {}\nTo Node: {}\nEdge Type: {}\nWeight: {}",
-                    edge_inst_from_var, edge_inst_to_var, edge_inst_edge_type, edge_inst_weight
-                );
-            }
-            for walker_inst in &graph.walker_insts {
-                let walker_inst_walker_type = walker_inst
-                    .walker_type
-                    .as_ref()
-                    .node_type
-                    .as_ref()
-                    .clone()
-                    .type_code();
-                let walker_inst_start_node = walker_inst.start_node.as_ref().varname.clone();
-                println!(
-                    "----Walker Instance:----\nStart Node: {}\nWalker Type: {}",
-                    walker_inst_start_node, walker_inst_walker_type
-                );
-            }
+impl TypeCodeGen for PIMField {
+    fn type_code(&self) -> String {
+        match &self.pim_type {
+            PIMType::Basic(t) => format!("{} {};", t.type_code(), self.varname),
+            PIMType::Array(t, i) => format!("{} {} [{}];", t.type_code(), self.varname, i),
         }
     }
 }
 
-fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
-    let mut output_file = fs::File::create(file_name)?;
+impl TypeCodeGen for NamedBlock {
+    fn type_code(&self) -> String {
+        let content: Vec<String> = self.fields.iter().map(|field| field.type_code()).collect();
 
-    writeln!(output_file, "// Generated C code")?;
-    writeln!(output_file, "#include <stdint.h>")?;
-    writeln!(output_file, "#include <stdio.h>")?;
-    writeln!(output_file, "#include <kernel.c>")?;
-    writeln!(output_file, "#include <string.h>\n")?;
-
-    writeln!(output_file, "// Struct definitions for nodes")?;
-    for graph in &sem.graphs {
-        for node_inst in &graph.node_insts {
-            writeln!(output_file, "{};\n", node_inst.node_type.type_code())?;
-        }
+        String::from(format!(
+            "typedef struct _{} {{ \n\t{}\n}} {}",
+            self.name,
+            content.join("\n\t"),
+            self.name
+        ))
     }
-
-    writeln!(output_file, "// Struct definitions for edges")?;
-    for (_edge_name, edge) in &sem.edges {
-        writeln!(output_file, "{};\n", edge.type_code())?;
-    }
-
-    writeln!(output_file, "// Struct definitions for walkers")?;
-    for (_walker_name, walker) in &sem.walkers {
-        writeln!(
-            output_file,
-            "using {} = {};",
-            walker.name, walker.node_type.name
-        )?;
-    }
-
-    writeln!(output_file, "\nint main() {{")?;
-
-    for graph in &sem.graphs {
-        writeln!(output_file, "// Instantiate nodes")?;
-        for node_inst in &graph.node_insts {
-            writeln!(
-                output_file,
-                "\t{} {};",
-                node_inst.node_type.name, node_inst.varname
-            )?;
-        }
-
-        writeln!(output_file)?;
-
-        writeln!(output_file, "// Instantiate edges")?;
-        for edge_inst in &graph.edge_insts {
-            let edge_name = format!(
-                "{}_{}",
-                edge_inst.from_var.varname, edge_inst.to_var.varname
-            );
-            let edge_type_name = &edge_inst.edge_type.named_block.name;
-            let from_var = &edge_inst.from_var.varname;
-            let to_var = &edge_inst.to_var.varname;
-            let weight = edge_inst.weight;
-
-            writeln!(output_file, "\t{} {};", edge_type_name, edge_name)?;
-            writeln!(output_file, "\t{}.weight = {};", edge_name, weight)?;
-            writeln!(output_file, "\t{}.from = {};", edge_name, from_var)?;
-            writeln!(output_file, "\t{}.to = {};", edge_name, to_var)?;
-            writeln!(output_file)?;
-        }
-
-        writeln!(output_file, "// Instantiate walkers")?;
-        for walker_inst in &graph.walker_insts {
-            writeln!(
-                output_file,
-                "\t{} walker_on_{};",
-                walker_inst.walker_type.name, walker_inst.start_node.varname
-            )?;
-        }
-    }
-
-    writeln!(output_file, "\treturn 0;")?;
-    writeln!(output_file, "}}")?;
-
-    Ok(())
 }
 
-/* 
-fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
+impl TypeCodeGen for sem_type::SemanticEdge {
+    fn type_code(&self) -> String {
+        let mut content: Vec<String> = self.named_block.fields
+            .iter()
+            .map(|field| field.type_code())
+            .collect();
+
+        let from_type = &self.from.name;
+        let to_type = &self.to.name;
+
+        content.push(format!("{} from;", from_type));
+        content.push(format!("{} to;", to_type));
+
+        format!(
+            "typedef struct _{} {{\n\t{}\n}} {}",
+            self.named_block.name,
+            content.join("\n\t"),
+            self.named_block.name
+        )
+    }
+}
+
+
+#[test]
+pub fn test_node_code_gen() {
+    let _node = NamedBlock {
+        name: String::from("TestNode"),
+        fields: vec![PIMField {
+            varname: String::from("field"),
+            pim_type: PIMType::Basic(PIMBaseType::Char),
+        }],
+    };
+    _node.type_code();
+}
+
+
+pub fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     let mut output_file = fs::File::create(file_name)?;
 
     // Write header includes.
@@ -390,13 +294,13 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, &input_arguments[i]));\n\t\t}}")?;
     writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, \"DPU_INPUT_ARGUMENTS\", 0, sizeof(input_arguments[0]), DPU_XFER_DEFAULT));\n")?;
     
-    writeln!(output_file, "\t\t int last_loc = 0;")?;
+    writeln!(output_file, "\t\tint last_loc = 0;")?;
     for p in &node_pointer_list {
         writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
             \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, buffer_{} + input_size_dpu_8bytes * i));\n\t\t}}", p)?;
 
         writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, last_loc, dpu_input_size_bytes, DPU_XFER_DEFAULT));\n")?;
-        if (p != node_pointer_list.last().unwrap()) {
+        if p != node_pointer_list.last().unwrap() {
             writeln!(output_file, "\t\tlast_loc += dpu_input_size_bytes;\n")?;
         }
     }
@@ -469,7 +373,7 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 }
 
 
-fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
+pub fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
 
     let mut output_file = fs::File::create(file_name)?;
 
@@ -572,23 +476,5 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "return 0;\n}}")?;
 
 
-    Ok(())
-}
-
-*/
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-
-    let file_content = fs::read_to_string(args.file)?;
-    let sem = semantic_analysis(parse_str(&file_content)?)?;
-
-    print_info(sem.clone());
-    let g = &sem.graphs[0];
-    let assignment = assign_with_z3(&g.node_insts, &g.edge_insts, 64 * 1024 * 1024, 100);
-
-    write_to_file(&args.output, &sem).ok();
-    write_to_app("./examples/app.c", &sem).ok();
-    write_to_task("./examples/task.c", &sem).ok();
     Ok(())
 }
