@@ -7,10 +7,10 @@ mod semantics_analysis;
 use crate::parser::parse_str;
 use anyhow::Result;
 use clap::Parser;
+use code_gen::write_to_app;
+use code_gen::write_to_task;
 use code_gen::TypeCodeGen;
 use graph_cut::assign_with_z3;
-use code_gen::write_to_task;
-use code_gen::write_to_app;
 use sem_type::SemanticGlobal;
 use semantics_analysis::semantic_analysis;
 use std::fs;
@@ -175,7 +175,7 @@ fn write_to_file(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     Ok(())
 }
 
-/* 
+/*
 fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     let mut output_file = fs::File::create(file_name)?;
 
@@ -240,7 +240,7 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
             let from_var = &edge_inst.from_var.varname;
             let to_var = &edge_inst.to_var.varname;
             let weight = edge_inst.weight;
-            
+
             writeln!(output_file, "\t{} {};", edge_type_name, edge_name)?;
             writeln!(output_file, "\t{}.weight = {};", edge_name, weight)?;
             writeln!(output_file, "\t{}.from = {};", edge_name, from_var)?;
@@ -351,11 +351,11 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "\tTimer timer;\n")?;
 
     writeln!(output_file, "\tprintf(\"NR_TASKLETS\\t%d\\tBL\\t%d\\n\", NR_TASKLETS, BL);\n")?;
-    
+
 
     // Loop over main kernel
     writeln!(output_file, "\tfor(int rep = 0; rep < p.n_warmup + p.n_reps; rep++) {{")?;
-    
+
     // compute on CPU
     writeln!(output_file, "\t\t// Compute output on CPU (performance comparison and verification purposes)")?;
     writeln!(output_file, "\t\tif(rep >= p.n_warmup)")?;
@@ -386,13 +386,13 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     // Copy input arrays
     writeln!(output_file, "\t\t// Copy input arrays")?;
     writeln!(output_file, "\t\ti = 0;")?;
-    writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
+    writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{
     \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, &input_arguments[i]));\n\t\t}}")?;
     writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, \"DPU_INPUT_ARGUMENTS\", 0, sizeof(input_arguments[0]), DPU_XFER_DEFAULT));\n")?;
-    
+
     writeln!(output_file, "\t\t int last_loc = 0;")?;
     for p in &node_pointer_list {
-        writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{ 
+        writeln!(output_file, "\t\tDPU_FOREACH(dpu_set, dpu, i) {{
             \t\tDPU_ASSERT(dpu_prepare_xfer(dpu, buffer_{} + input_size_dpu_8bytes * i));\n\t\t}}", p)?;
 
         writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_TO_DPU, DPU_MRAM_HEAP_POINTER_NAME, last_loc, dpu_input_size_bytes, DPU_XFER_DEFAULT));\n")?;
@@ -423,7 +423,7 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "            }}")?;
     writeln!(output_file, "        }}")?;
     writeln!(output_file, "#endif\n")?;
-    
+
     writeln!(output_file, "\t\tprintf(\"Retrieve results\\n\");")?;
     writeln!(output_file, "\t\tif(rep >= p.n_warmup)\n\t\t\tstart(&timer, 3, rep - p.n_warmup);")?;
     writeln!(output_file, "\t\ti = 0;")?;
@@ -432,7 +432,7 @@ fn write_to_app(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "\t\tDPU_ASSERT(dpu_push_xfer(dpu_set, DPU_XFER_FROM_DPU, DPU_MRAM_HEAP_POINTER_NAME, last_loc, dpu_input_size_bytes, DPU_XFER_DEFAULT));")?;
     writeln!(output_file, "\t\tif(rep >= p.n_warmup) stop(&timer, 3);\n")?;
     writeln!(output_file, "\t}}")?;
-    
+
 
     writeln!(output_file, "\tprintf(\"CPU \");")?;
     writeln!(output_file, "\tprint(&timer, 0, p.n_reps);")?;
@@ -494,7 +494,7 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     writeln!(output_file, "extern int main_kernel1(void);\n")?;
     writeln!(output_file, "int (*kernels[nr_kernels])(void) = {{main_kernel1}};\n")?;
     writeln!(output_file, "int main(void) {{\n\treturn kernels[DPU_INPUT_ARGUMENTS.kernel](); \n}}\n")?;
-    
+
     // main_kernel1
     writeln!(output_file, "int main_kernel1() {{")?;
     writeln!(output_file, "\tunsigned int tasklet_id = me();")?;
@@ -512,13 +512,13 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
                 let node_name = node_inst.varname.clone();
                 let field_name = field.varname.clone();
                 let pointer_name = format!("{}_{}", node_name, field_name);
-                
+
                 writeln!(output_file, "\tuint32_t mram_base_addr_{} = (uint32_t)(DPU_MRAM_HEAP_POINTER + input_size_dpu_bytes_transfer * i);", pointer_name)?;
                 writeln!(output_file, "\ti ++;")?;
             }
         }
     }
-    
+
     writeln!(output_file, "\n\t// Initialize a local cache to store the MRAM block")?;
 
     for node_inst in &sem.graphs[0].node_insts {
@@ -533,10 +533,10 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     }
 
     writeln!(output_file, "\tfor(unsigned int byte_index = base_tasklet; byte_index < input_size_dpu_bytes; byte_index += BLOCK_SIZE * NR_TASKLETS){{\n")?;
-    
+
     // Bound checking
     writeln!(output_file, "\t\tuint32_t l_size_bytes = (byte_index + BLOCK_SIZE >= input_size_dpu_bytes) ? (input_size_dpu_bytes - byte_index) : BLOCK_SIZE;\n")?;
-    
+
 
     let mut name_list = vec![];
     // Load cache with current MRAM block
@@ -565,7 +565,7 @@ fn write_to_task(file_name: &str, sem: &SemanticGlobal) -> Result<()> {
     // Write cache to current MRAM block
     if let Some(last_name) = name_list.last() {
         writeln!(output_file, "\t\tmram_write(cache_{}, (__mram_ptr void*)(mram_base_addr_{} + byte_index), l_size_bytes);", last_name, last_name)?;
-    } 
+    }
 
     writeln!(output_file, "\n\t}}\n")?;
 

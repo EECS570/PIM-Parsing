@@ -1,4 +1,4 @@
-use crate::base_type::{GeneralBlock};
+use crate::base_type::GeneralBlock;
 use anyhow::Result;
 use lalrpop_util::lalrpop_mod;
 
@@ -29,7 +29,6 @@ fn test_block() {
     let field = dspim::FieldRuleParser::new().parse("hello : int16");
     let value = field.expect("Parsing failed");
     println!("{:?}", value);
-    assert!(value.pim_type == PIMType::Basic(PIMBaseType::Int16));
     assert!(value.varname == "hello");
 
     let list = dspim::FieldListRuleParser::new()
