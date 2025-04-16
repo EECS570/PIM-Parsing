@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::sem_type::{SemanticGraph, SemanticNodeInst};
+use crate::sem_type::{SemanticGlobal, SemanticGraph, SemanticNodeInst};
 use indoc::{formatdoc, indoc};
 
 pub fn initialization_declaration(graph: &SemanticGraph) -> String {
@@ -35,7 +35,12 @@ pub fn initialization_declaration(graph: &SemanticGraph) -> String {
     result
 }
 
-pub fn main_function(graph: &SemanticGraph, core_num: u64, node_allocation: &Vec<Vec<Rc<SemanticNodeInst>>>) -> String {
+pub fn main_function(
+    global: &SemanticGlobal,
+    core_num: u64,
+    core_node_allocation: &Vec<Vec<Rc<SemanticNodeInst>>>,
+) -> String {
+    let graph = &global.graphs[0];
     // Instantiate all the nodes
     let nodes = graph
         .node_insts
@@ -82,24 +87,6 @@ pub fn main_function(graph: &SemanticGraph, core_num: u64, node_allocation: &Vec
     #include \"dpu.h\"
     #include \"dpu_binary.h\"
     "};
-
-    // Here is an example of the generated code
-    //   int main() {
-    //   struct dpu_set_t set, dpu;
-    //   uint32_t checksum;
-
-    //   DPU_ASSERT(dpu_alloc(1, NULL, &set));
-    //   DPU_ASSERT(dpu_load(set, DPU_BINARY, NULL));
-    //   populate_mram(set);
-
-    //   DPU_ASSERT(dpu_launch(set, DPU_SYNCHRONOUS));
-    //   DPU_FOREACH(set, dpu) {
-    //     DPU_ASSERT(dpu_copy_from(dpu, "checksum", 0, (uint8_t *)&checksum, sizeof(checksum)));
-    //     printf("Computed checksum = 0x%08x\n", checksum);
-    //   }
-    //   DPU_ASSERT(dpu_free(set));
-    //   return 0;
-    // }
     // Generate the DPU allocation code
     let dpu_alloc = formatdoc! {
       r#"
@@ -112,26 +99,26 @@ pub fn main_function(graph: &SemanticGraph, core_num: u64, node_allocation: &Vec
     };
 
     // Populate the nodes to the MRAM
-    // Here is an example of the generated code
-    //   struct dpu_set_t dpu;
-    //   uint32_t each_dpu;
-    //   uint8_t *buffer = malloc(BUFFER_SIZE * nr_dpus);
-    //   DPU_FOREACH(set, dpu, each_dpu) {
-    //     for (int byte_index = 0; byte_index < BUFFER_SIZE; byte_index++) {
-    //       buffer[each_dpu * BUFFER_SIZE + byte_index] = (uint8_t)byte_index;
-    //     }
-    //     buffer[each_dpu * BUFFER_SIZE] += each_dpu; // each dpu will compute a different checksum
-    //     DPU_ASSERT(dpu_prepare_xfer(dpu, &buffer[each_dpu * BUFFER_SIZE]));
-    //   }
-    //   DPU_ASSERT(dpu_push_xfer(set, DPU_XFER_TO_DPU, "buffer", 0, BUFFER_SIZE, DPU_XFER_DEFAULT));
-    //   free(buffer);
-    let 
+    // TODO
 
+    // Start the DPU
+    let dpu_start = formatdoc! {
+      r#"
+    // Load the DPU binary
+    DPU_ASSERT(dpu_load(set, DPU_BINARY));
+    // Launch
+    DPU_ASSERT(dpu_launch(set, DPU_SYNCHRONOUS));
+    "#
+    };
 
     // Generate the main function
     let main = formatdoc! {
       r#"
     int main(int argc, char **argv) {{
+      // Instantiate all the nodes
+      {}
+      // Instantiate all the edges
+      {}
       // Initialize the DPU
       {}
       // Initialize the nodes
@@ -139,16 +126,15 @@ pub fn main_function(graph: &SemanticGraph, core_num: u64, node_allocation: &Vec
       // Initialize the edges
       {}
       // Start the DPU
-      dpu_start();
-      // Wait for the DPU to finish
-      dpu_wait();
-      // Free the DPU
-      dpu_free();
+      {}
     }}
     "#,
+        nodes,
+        edges,
       dpu_alloc,
       init_nodes,
-      init_edges
+      init_edges,
+        dpu_start
     };
     main
 }
