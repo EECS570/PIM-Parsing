@@ -1,7 +1,6 @@
-NUM_OF_NODES = 100
-SIZE_OF_WALKER_BYTES = 4
-NUM_DPUS = 40
-MAX_NODES_PER_DPU = 10
+NUM_OF_NODES = 1000
+NUM_DPUS = 100
+MAX_NODES_PER_DPU = 50
 
 import z3
 
@@ -18,7 +17,7 @@ def network_generator() -> list[list[int]]:
     available_nodes = [j for j in range(NUM_OF_NODES) if j != i and j not in res[i]]
     if not available_nodes:
       continue
-    node_id = random.choices(available_nodes, k=random.randint(1, max(3, len(available_nodes))))
+    node_id = random.choices(available_nodes, k=random.randint(1, min(30, len(available_nodes))))
     for j in node_id:
       if j not in res[i]:
         res[i].append(j)
@@ -53,6 +52,7 @@ def z3_scheduling(network: list[list[int]]) -> list[list[int]]:
 
   s.add(node_constraints)
   s.add(dpu_size_constraints)
+  s.add(nodes[0] == 0)
 
   expr = 0
   for i in range(NUM_OF_NODES):
@@ -73,6 +73,24 @@ def z3_scheduling(network: list[list[int]]) -> list[list[int]]:
     return res
   
   
+def greedy_schedule(network):
+    assignment = [[] for _ in range(NUM_DPUS)]
+    node_to_dpu = {}
+    for node in range(len(network)):
+        # Count how many neighbors are in each DPU
+        neighbor_count = [0] * NUM_DPUS
+        for neighbor in network[node]:
+            if neighbor in node_to_dpu:
+                neighbor_count[node_to_dpu[neighbor]] += 1
+        # Pick the DPU with most neighbors and space
+        sorted_dpus = sorted(range(NUM_DPUS), key=lambda i: -neighbor_count[i])
+        for dpu in sorted_dpus:
+            if len(assignment[dpu]) < MAX_NODES_PER_DPU:
+                assignment[dpu].append(node)
+                node_to_dpu[node] = dpu
+                break
+    return assignment
+
 
 
 
@@ -106,14 +124,15 @@ def evaluation(scheduling: list[list[int]], path: list[int]) -> int:
 def main():
   network = network_generator()
   scheduling = random_dpu_scheduling()
-  z3_scheduling_result = z3_scheduling(network)
+  greedy_scheduled = greedy_schedule(network)
   print(f"Random DPU Scheduling: {scheduling}")
+  print(f"Greedy DPU Scheduling: {greedy_scheduled}")
   start_node = 0
   max_depth = 3
   path = bfs_walk(network, start_node, max_depth)
   jumps = evaluation(scheduling, path)
-  z3_jumps = evaluation(z3_scheduling_result, path)
+  greedy_scheduled_jumps = evaluation(greedy_scheduled, path)
   print(f"Jump: {jumps}")
-  print(f"Z3 Jump: {z3_jumps}")
+  print(f"Greedy Jump: {greedy_scheduled_jumps}")
 
 main()
