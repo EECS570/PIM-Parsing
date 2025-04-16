@@ -1,0 +1,19 @@
+node Data {
+  vec: int32[128];
+  prefix_sum: int32[128];
+};
+
+walker Scan {
+  int32 sum;
+}
+
+edge Regular{};
+
+graph {
+  Data d1, d2, d3, d4, d5;
+  Regular next1 d1, d2, 10;
+  Regular next2 d2, d3, 10;
+  Regular next3 d3, d4, 10;
+  Regular next4 d4, d5, 10;
+  Scan w1 on d1;
+}

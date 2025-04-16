@@ -1,0 +1,15 @@
+node Data {
+  vec1: int32[128];
+  vec2: int32[128];
+};
+
+walker adder {};
+
+edge Next {};
+
+graph {
+    Data d1, d2, d3, d4;
+    Next n1, d1, d2, -1;
+    Next n2, d2, d3, -1;
+    Next n3, d3, d4, -1;
+};
