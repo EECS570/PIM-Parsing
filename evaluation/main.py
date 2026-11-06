@@ -91,6 +91,59 @@ def greedy_schedule(network):
                 break
     return assignment
 
+# BCO
+import random
+import copy
+
+def count_cross_dpu_edges(schedule, network):
+    # Build a node -> dpu mapping
+    node_to_dpu = {}
+    for dpu_id, node_list in enumerate(schedule):
+        for node in node_list:
+            node_to_dpu[node] = dpu_id
+
+    # Count cross-DPU edges
+    cost = 0
+    for u in range(NUM_OF_NODES):
+        for v in network[u]:
+            if node_to_dpu[u] != node_to_dpu[v]:
+                cost += 1
+    return cost // 2  # Each edge counted twice
+
+def get_neighbors(schedule):
+    neighbors = []
+    num_dpus = len(schedule)
+
+    for from_dpu in range(num_dpus):
+        for node in schedule[from_dpu]:
+            for to_dpu in range(num_dpus):
+                if from_dpu != to_dpu and len(schedule[to_dpu]) < MAX_NODES_PER_DPU:
+                    # Generate a neighbor by moving node to another DPU
+                    new_schedule = copy.deepcopy(schedule)
+                    new_schedule[from_dpu].remove(node)
+                    new_schedule[to_dpu].append(node)
+                    neighbors.append(new_schedule)
+    return neighbors
+
+def bco_improve(schedule, network, num_bees=5, num_neighbors=10):
+    best_schedule = schedule
+    best_cost = count_cross_dpu_edges(schedule, network)
+
+    for i in range(num_bees):  # Employed bees
+        print(f"Iteration {i+1}/{num_bees}")
+        neighbors = get_neighbors(best_schedule)
+        if not neighbors:
+            break
+
+        sampled_neighbors = random.sample(neighbors, min(len(neighbors), num_neighbors))
+        for neighbor in sampled_neighbors:
+            cost = count_cross_dpu_edges(neighbor, network)
+            if cost < best_cost:
+                best_schedule = neighbor
+                best_cost = cost
+                break  # Accept first improvement
+
+    return best_schedule
 
 
 
@@ -123,16 +176,17 @@ def evaluation(scheduling: list[list[int]], path: list[int]) -> int:
 
 def main():
   network = network_generator()
-  scheduling = random_dpu_scheduling()
-  greedy_scheduled = greedy_schedule(network)
-  print(f"Random DPU Scheduling: {scheduling}")
-  print(f"Greedy DPU Scheduling: {greedy_scheduled}")
   start_node = 0
-  max_depth = 3
+  max_depth = 30
   path = bfs_walk(network, start_node, max_depth)
-  jumps = evaluation(scheduling, path)
-  greedy_scheduled_jumps = evaluation(greedy_scheduled, path)
-  print(f"Jump: {jumps}")
-  print(f"Greedy Jump: {greedy_scheduled_jumps}")
+  scheduling_jump = evaluation(random_dpu_scheduling(), path)
+  print(f"Random scheduling: {scheduling_jump}")
+  greedy_scheduled = greedy_schedule(network)
+  greedy_jump = evaluation(greedy_scheduled, path)
+  print(f"Greedy scheduling: {greedy_jump}")
+  bco_jump = evaluation(bco_improve(greedy_scheduled, network), path)
+  print(f"BCO scheduling: {bco_jump}")
+
+
 
 main()
